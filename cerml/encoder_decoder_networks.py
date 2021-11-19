@@ -127,6 +127,17 @@ class EncoderMixtureModelTransitionSharedY(nn.Module):
                  time_steps,
                  merge_mode
     ):
+        """
+        Initialize the encoder
+
+        :param shared_dim: Size of the shared encoder layers (before branching into y and z encoder)
+        :param encoder_input_dim: Input size to the encoder
+        :param latent_dim: Size of the latent z
+        :param batch_size:
+        :param num_classes: Number K of base task classes
+        :param time_steps: Time steps used to determine current task (context window size)
+        :param merge_mode: How to combine inferred base tasks from the context window into a shared base task
+        """
         super(EncoderMixtureModelTransitionSharedY, self).__init__()
         self.shared_dim = shared_dim
         self.encoder_input_dim = encoder_input_dim
@@ -149,6 +160,12 @@ class EncoderMixtureModelTransitionSharedY(nn.Module):
         self.gauss_encoder_list = nn.ModuleList([nn.Linear(self.shared_dim, self.latent_dim * 2) for _ in range(self.num_classes)])
 
     def forward(self, x):
+        """
+        Encode the provided context
+        :param x: context of the form (timesteps, obs + action + reward + next_obs)
+        :return: z - task indicator [batch_size, latent_dim]
+                 y - base task indicator [batch_size]
+        """
         y_distribution, z_distributions = self.encode(x)
         # TODO: could be more efficient if only compute the Gaussian layer of the y that we pick later
         return self.sample_z(y_distribution, z_distributions, y_usage="most_likely", sampler="mean")
@@ -185,8 +202,19 @@ class EncoderMixtureModelTransitionSharedY(nn.Module):
         return y_distribution, z_distributions
 
     def sample_z(self, y_distribution, z_distributions, y_usage="specific", y=None, sampler="random"):
-        # Select from which Gaussian to sample
+        """
+        Sample from the latent Gaussian mixture model
 
+        :param y_distribution: Categorical distribution of the classes
+        :param z_distributions: List of Gaussian distributions
+        :param y_usage: 'most_likely' to sample from the most likely class per batch
+                'specific' to sample from the class specified in param y for all batches
+        :param y: class to sample from if y_usage=='specific'
+        :param sampler: 'random' for actual sampling, 'mean' to return the mean of the Gaussian
+        :return: z - task indicator [batch_size, latent_dim]
+                 y - base task indicator [batch_size]
+        """
+        # Select from which Gaussian to sample
         # Used for individual sampling when computing ELBO
         if y_usage == "specific":
             y = ptu.ones(self.batch_size, dtype=torch.long) * y
@@ -335,6 +363,7 @@ class DecoderMDP(nn.Module):
         )
 
     def forward(self, state, action, next_state, z):
+        # Todo: next_state unused. Is this intentional?
         state_estimate = self.net_state_decoder(torch.cat([state, action, z], dim=1))
         reward_estimate = self.net_reward_decoder(torch.cat([state, action, z], dim=1))
 

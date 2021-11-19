@@ -249,7 +249,7 @@ class PolicyTrainer:
         policy_loss = (alpha*log_pi - q_new_actions).mean()
 
         """
-        Update QF networks
+        Update policy networks
         """
         self.policy_optimizer.zero_grad()
         policy_loss.backward()

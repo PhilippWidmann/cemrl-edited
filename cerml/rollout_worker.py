@@ -57,7 +57,10 @@ class RolloutCoordinator:
             )
 
     def collect_data(self, tasks, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False):
-        # distribute tasks over workers
+        """
+        Distribute tasks over workers
+        :return: Trajectories as a list of list of list (workers, tasks, (path_dict, num_env_steps))
+        """
         tasks_per_worker = [[] for _ in range(self.num_workers)]
         counter = 0
         for task in tasks:
@@ -94,6 +97,12 @@ class RolloutCoordinator:
         return results
 
     def collect_replay_data(self, tasks, max_samples=np.inf):
+        """
+        Run episodes on the environment and store the trajectories in the replay buffer
+        :param tasks: List of tasks to run
+        :param max_samples: Samples to collect per task
+        :return: Number of environment steps executed
+        """
         num_env_steps = 0
         results = self.collect_data(tasks, 'train', deterministic=False, max_samples=max_samples, animated=False)
         for worker in results:
@@ -196,6 +205,8 @@ class RolloutWorker:
         """
         Obtains samples in the environment until either we reach either max_samples transitions or
         num_traj trajectories.
+        :return: list of trajectory dicts
+            number of executed environment steps
         """
 
         assert max_samples < np.inf or max_trajs < np.inf, "either max_samples or max_trajs must be finite"

@@ -68,7 +68,7 @@ default_config = dict(
         lr_decoder=3e-4,  # learning rate decoder (ADAM) 3e-4 when combine with combination trainer,
         alpha_kl_z=1e-3,  # weighting factor KL loss of z distribution
         beta_kl_y=1e-3,  # # weighting factor KL loss of y distribution
-        net_complex_enc_dec=10.0,  # determines overall net complextity in encoder and decoder
+        net_complex_enc_dec=10.0,  # determines overall net complextity in encoder and decoder (shared_dim = net_complex_enc_dec * input_dim)
         factor_qf_loss=1.0,  # weighting of state and reward loss compared to Qfunction in combination trainer
         train_val_percent=0.8,  # percentage of train samples vs. validation samples
         eval_interval=50,  # interval for evaluation with validation data and possible early stopping

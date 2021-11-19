@@ -46,6 +46,9 @@ class StackedReplayBuffer:
         self._cur_episode_start = self._top
 
     def add_zero_elements(self):
+        """
+        Add zeros as buffer between episodes, number equal to the context window size (self.time_steps)
+        """
         # TODO: as already spawned as zeros, actually not zero writing needed, could only advance
         for t in range(self.time_steps):
             self.add_sample(
@@ -62,6 +65,10 @@ class StackedReplayBuffer:
 
 
     def add_episode(self, episode):
+        """
+        Add an episode rollout to the replay buffer.
+        :param episode: Dictionary containing all named entries stored in the replay buffer
+        """
         # Assume all array are same length (as they come from same rollout)
         length = episode['observations'].shape[0]
 
@@ -135,6 +142,7 @@ class StackedReplayBuffer:
             self._size = self._max_replay_buffer_size
 
     def sample_data(self, indices):
+        # Todo: Add base task indicator
         return dict(
             observations=self._observations[indices],
             next_observations=self._next_obs[indices],
