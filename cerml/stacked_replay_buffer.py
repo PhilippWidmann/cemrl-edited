@@ -150,6 +150,7 @@ class StackedReplayBuffer:
             rewards=self._rewards[indices],
             task_indicators=self._task_indicators[indices],
             next_task_indicators=self._next_task_indicators[indices],
+            base_task_indicators=self._base_task_indicators[indices],
             sparse_rewards=self._sparse_rewards[indices],
             terminals=self._terminals[indices],
             true_tasks=self._true_task[indices]

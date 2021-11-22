@@ -8,6 +8,7 @@ import json
 import torch
 import torch.nn as nn
 
+from cerml.policy_networks import SingleSAC
 from rlkit.envs import ENVS
 from rlkit.envs.wrappers import NormalizedBoxEnv, CameraWrapper
 from rlkit.torch.sac.policies import TanhGaussianPolicy
@@ -103,49 +104,19 @@ def experiment(variant):
 
     prior_pz = PriorPz(num_classes, latent_dim)
 
-    M = variant['algo_params']['sac_layer_size']
-    qf1 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    qf2 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    target_qf1 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    target_qf2 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    policy = TanhGaussianPolicy(
-        obs_dim=(obs_dim + latent_dim),
-        action_dim=action_dim,
-        latent_dim=latent_dim,
-        hidden_sizes=[M, M, M],
+    policy_networks = SingleSAC(
+        obs_dim,
+        latent_dim,
+        action_dim,
+        variant['algo_params']['sac_layer_size']
     )
 
-    alpha_net = Mlp(
-        hidden_sizes=[latent_dim * 10],
-        input_size=latent_dim,
-        output_size=1
-    )
-
-    networks = {'encoder': encoder,
-                'prior_pz': prior_pz,
-                'decoder': decoder,
-                'qf1': qf1,
-                'qf2': qf2,
-                'target_qf1': target_qf1,
-                'target_qf2': target_qf2,
-                'policy': policy,
-                'alpha_net': alpha_net}
+    networks = {
+        'encoder': encoder,
+        'prior_pz': prior_pz,
+        'decoder': decoder,
+        **policy_networks.get_snapshot()
+    }
 
     # optionally load pre-trained weights
     if variant['path_to_weights'] is not None:
@@ -172,7 +143,7 @@ def experiment(variant):
     agent = agent_class(
         encoder,
         prior_pz,
-        policy
+        policy_networks
     )
 
     # Rollout Coordinator
@@ -225,12 +196,7 @@ def experiment(variant):
 
     # PolicyTrainer
     policy_trainer = PolicyTrainer(
-        policy,
-        qf1,
-        qf2,
-        target_qf1,
-        target_qf2,
-        alpha_net,
+        policy_networks,
         replay_buffer,
         variant['algo_params']['batch_size_policy'],
         action_dim,
@@ -240,6 +206,8 @@ def experiment(variant):
         alpha=variant['algo_params']['sac_alpha']
     )
 
+    # Combination trainer not supported right now
+    """
     combination_trainer = CombinationTrainer(
         # from reconstruction trainer
         encoder,
@@ -271,6 +239,7 @@ def experiment(variant):
         target_entropy_factor=variant['algo_params']['target_entropy_factor']
         # stuff missing
     )
+    """
 
 
     relabeler = Relabeler(
@@ -287,7 +256,7 @@ def experiment(variant):
         replay_buffer,
         rollout_coordinator,
         reconstruction_trainer,
-        combination_trainer,
+        None,  # combination_trainer, #is not supported right now
         policy_trainer,
         relabeler,
         agent,
@@ -341,7 +310,7 @@ def deep_update_dict(fr, to):
     return to
 
 @click.command()
-@click.argument('config', default=None)
+@click.argument('config', default="configs/cheetah-stationary-dir.json")#None)
 @click.option('--gpu', default=0)
 @click.option('--num_workers', default=4)
 @click.option('--use_mp', is_flag=True, default=False)

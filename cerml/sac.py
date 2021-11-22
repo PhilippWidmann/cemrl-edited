@@ -10,6 +10,7 @@ from torch import nn as nn
 import gtimer as gt
 
 import rlkit.torch.pytorch_util as ptu
+from cerml.policy_networks import SingleSAC
 from rlkit.core.eval_util import create_stats_ordered_dict
 
 import matplotlib.pyplot as plt
@@ -18,12 +19,7 @@ import matplotlib.pyplot as plt
 class PolicyTrainer:
     def __init__(
             self,
-            policy,
-            qf1,
-            qf2,
-            target_qf1,
-            target_qf2,
-            alpha_net,
+            policy_networks: SingleSAC,
 
             replay_buffer,
             batch_size,
@@ -51,12 +47,7 @@ class PolicyTrainer:
 
     ):
         super().__init__()
-        self.policy = policy
-        self.qf1 = qf1
-        self.qf2 = qf2
-        self.target_qf1 = target_qf1
-        self.target_qf2 = target_qf2
-        self.alpha_net = alpha_net
+        self.policy_networks = policy_networks
         self.soft_target_tau = soft_target_tau
         self.target_update_period = target_update_period
 
@@ -64,7 +55,7 @@ class PolicyTrainer:
         self.batch_size = batch_size
 
         self.env_action_space = env_action_space
-        self.data_usage_sac= data_usage_sac
+        self.data_usage_sac = data_usage_sac
 
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
         self.use_parametrized_alpha = use_parametrized_alpha
@@ -77,7 +68,7 @@ class PolicyTrainer:
 
             if self.use_parametrized_alpha:
                 self.alpha_optimizer = optimizer_class(
-                    self.alpha_net.parameters(),
+                    self.policy_networks.alpha_net.parameters(),
                     lr=policy_lr,
                 )
             else:
@@ -95,15 +86,15 @@ class PolicyTrainer:
         self.vf_criterion = nn.MSELoss()
 
         self.policy_optimizer = optimizer_class(
-            self.policy.parameters(),
+            self.policy_networks.policy.parameters(),
             lr=policy_lr,
         )
         self.qf1_optimizer = optimizer_class(
-            self.qf1.parameters(),
+            self.policy_networks.qf1.parameters(),
             lr=qf_lr,
         )
         self.qf2_optimizer = optimizer_class(
-            self.qf2.parameters(),
+            self.policy_networks.qf2.parameters(),
             lr=qf_lr,
         )
 
@@ -135,7 +126,7 @@ class PolicyTrainer:
             plt.plot(list(range(len(policy_losses))), np.array(policy_losses), label="Policy loss")
             plt.xlim(left=0)
             plt.legend()
-            #plt.ylim(bottom=0)
+            # plt.ylim(bottom=0)
             plt.subplot(3, 1, 2)
             plt.plot(list(range(len(alphas))), np.array(alphas), label="alphas")
             plt.legend()
@@ -163,30 +154,38 @@ class PolicyTrainer:
         actions = ptu.from_numpy(batch['actions'])
         next_obs = ptu.from_numpy(batch['next_observations'])
         task_z = ptu.from_numpy(batch['task_indicators'])
-        new_task_z = ptu.from_numpy(batch['next_task_indicators'])
+        task_y = ptu.from_numpy(batch['base_task_indicators'])
+        # new_task_z = ptu.from_numpy(batch['next_task_indicators'])
+        # new_task_y = ptu.from_numpy(batch['next_base_task_indicators'])
         if step == 0:
             gt.stamp('pt_to_torch')
 
-        #for debug
-        #task_z = torch.zeros_like(task_z)
-        #new_task_z = torch.zeros_like(new_task_z)
-        #task_z = torch.from_numpy(batch['true_tasks'])
-        #new_task_z = torch.cat([task_z[1:,:], task_z[-1,:].view(1,1)])
+        # for debug
+        # task_z = torch.zeros_like(task_z)
+        # new_task_z = torch.zeros_like(new_task_z)
+        # task_z = torch.from_numpy(batch['true_tasks'])
+        # new_task_z = torch.cat([task_z[1:,:], task_z[-1,:].view(1,1)])
+        # Todo: We overwrite the new task here. Is this really intentional?
         new_task_z = task_z.clone().detach()
+        new_task_y = task_y.clone().detach()
 
         # Variant 1: train the SAC as if there was no encoder and the state is just extended to be [state , z]
-        obs = torch.cat((obs, task_z), dim=1)
-        next_obs = torch.cat((next_obs, new_task_z), dim=1)
+        # obs = torch.cat((obs, task_z), dim=1)
+        # next_obs = torch.cat((next_obs, new_task_z), dim=1)
 
         """
         Alpha Loss
         """
-        new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
-            obs, reparameterize=True, return_log_prob=True,
+        new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy_networks.forward(
+            'policy',
+            obs,
+            task_z,
+            task_y,
+            reparameterize=True, return_log_prob=True,
         )
         if self.use_automatic_entropy_tuning:
             if self.use_parametrized_alpha:
-                self.log_alpha = self.alpha_net(task_z)
+                self.log_alpha = self.policy_networks.forward('alpha_net', None, task_z, task_y)
             alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
             self.alpha_optimizer.zero_grad()
             alpha_loss.backward()
@@ -205,15 +204,19 @@ class PolicyTrainer:
         """
         QF Loss
         """
-        q1_pred = self.qf1(obs, actions)
-        q2_pred = self.qf2(obs, actions)
+        q1_pred = self.policy_networks.forward('qf1', obs, task_z, task_y, actions)
+        q2_pred = self.policy_networks.forward('qf2', obs, task_z, task_y, actions)
         # Make sure policy accounts for squashing functions like tanh correctly!
-        new_next_actions, _, _, new_log_pi, *_ = self.policy(
-            next_obs, reparameterize=True, return_log_prob=True,
+        new_next_actions, _, _, new_log_pi, *_ = self.policy_networks.forward(
+            'policy',
+            next_obs,
+            new_task_z,
+            new_task_y,
+            reparameterize=True, return_log_prob=True
         )
         target_q_values = torch.min(
-            self.target_qf1(next_obs, new_next_actions),
-            self.target_qf2(next_obs, new_next_actions),
+            self.policy_networks.forward('target_qf1', next_obs, new_task_z, new_task_y,  new_next_actions),
+            self.policy_networks.forward('target_qf2', next_obs, new_task_z, new_task_y,  new_next_actions),
         ) - alpha * new_log_pi
 
         q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
@@ -241,8 +244,8 @@ class PolicyTrainer:
         Policy Loss
         """
         q_new_actions = torch.min(
-            self.qf1(obs, new_obs_actions),
-            self.qf2(obs, new_obs_actions),
+            self.policy_networks.forward('qf1', obs, task_z, task_y, new_obs_actions),
+            self.policy_networks.forward('qf2', obs, task_z, task_y, new_obs_actions),
         )
         if step == 0:
             gt.stamp('pt_q_forward')
@@ -262,12 +265,7 @@ class PolicyTrainer:
         Soft Updates
         """
         if self._n_train_steps_total % self.target_update_period == 0:
-            ptu.soft_update_from_to(
-                self.qf1, self.target_qf1, self.soft_target_tau
-            )
-            ptu.soft_update_from_to(
-                self.qf2, self.target_qf2, self.soft_target_tau
-            )
+            self.policy_networks.soft_target_update(self.soft_target_tau)
 
         if step == 0:
             gt.stamp('pt_q_softupdate')
@@ -330,20 +328,7 @@ class PolicyTrainer:
 
     @property
     def networks(self):
-        return [
-            self.policy,
-            self.qf1,
-            self.qf2,
-            self.target_qf1,
-            self.target_qf2,
-        ]
+        return self.policy_networks.networks()
 
     def get_snapshot(self):
-        return dict(
-            policy=self.policy,
-            qf1=self.qf1,
-            qf2=self.qf2,
-            target_qf1=self.qf1,
-            target_qf2=self.qf2,
-        )
-
+        return self.policy_networks.get_snapshot()

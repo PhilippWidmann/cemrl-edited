@@ -19,11 +19,10 @@ class CEMRLAgent(nn.Module):
 
     def get_action(self, encoder_input, state, deterministic=False, z_debug=None, env=None):
         state = ptu.from_numpy(state).view(1, -1)
-        z, _ = self.encoder(encoder_input)
+        z, y = self.encoder(encoder_input)
         if z_debug is not None:
             z = z_debug
-        policy_input = torch.cat([state, z], dim=1)
-        return self.policy.get_action(policy_input, deterministic=deterministic), np_ify(z.clone().detach())[0, :]
+        return self.policy.get_action(state, z, y, deterministic=deterministic), np_ify(z.clone().detach())[0, :]
 
 class ScriptedPolicyAgent(nn.Module):
     def __init__(self,
@@ -32,9 +31,6 @@ class ScriptedPolicyAgent(nn.Module):
                  policy
                  ):
         super(ScriptedPolicyAgent, self).__init__()
-        self.encoder = encoder
-        self.prior_pz = prior_pz
-        self.policy = policy
         self.latent_dim = encoder.latent_dim
 
     def get_action(self, encoder_input, state, deterministic=False, z_debug=None, env=None):
