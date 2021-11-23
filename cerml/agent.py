@@ -22,7 +22,9 @@ class CEMRLAgent(nn.Module):
         z, y = self.encoder(encoder_input)
         if z_debug is not None:
             z = z_debug
-        return self.policy.get_action(state, z, y, deterministic=deterministic), np_ify(z.clone().detach())[0, :]
+        return self.policy.get_action(state, z, y, deterministic=deterministic), \
+               np_ify(z.clone().detach())[0, :], \
+               np_ify(y.clone().detach())[0]
 
 class ScriptedPolicyAgent(nn.Module):
     def __init__(self,
@@ -37,4 +39,6 @@ class ScriptedPolicyAgent(nn.Module):
         env_name = env.active_env_name
         oracle_policy = policies[env_name]()
         action = oracle_policy.get_action(state)
-        return (action.astype('float32'), {}), np.zeros(self.latent_dim, dtype='float32')
+        return (action.astype('float32'), {}), \
+               np.zeros(self.latent_dim, dtype='float32'), \
+               np.zeros(1, dtype='float32')

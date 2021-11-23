@@ -40,6 +40,7 @@ class Relabeler:
 
             # Uncomment to compute last next_z exactly.
             # Right now we use the last z as next_z, as next_z is actually never used
+            # next_y is not computed in this code; would have to be added if used
             '''
             # a lot to do for computing next_z (as there is no more future data point)
             observations = ptu.from_numpy(data['observations'])[-1,1:,:]
@@ -64,8 +65,10 @@ class Relabeler:
             '''
 
             next_z = torch.cat([z[1:], z[-1].unsqueeze(0)])
+            next_y = torch.cat([y[1:], y[-1].unsqueeze(0)])
 
-            self.replay_buffer.relabel_z(start, batch_size, ptu.get_numpy(z), ptu.get_numpy(next_z), ptu.get_numpy(y))
+            self.replay_buffer.relabel_z(start, batch_size, ptu.get_numpy(z), ptu.get_numpy(next_z),
+                                         ptu.get_numpy(y), ptu.get_numpy(next_y))
 
             start += batch_size
 

@@ -226,6 +226,7 @@ class RolloutWorker:
 
         observations = []
         task_indicators = []
+        base_task_indicators = []
         actions = []
         rewards = []
         terminals = []
@@ -251,6 +252,7 @@ class RolloutWorker:
             out = self.agent.get_action(agent_input, o, deterministic=deterministic, z_debug=None, env=self.env)
             a, agent_info = out[0]
             task_indicator = out[1]
+            base_task_indicator = out[2]
             next_o, r, d, env_info = self.env.step(a)
             self.update_context(o, a, np.array([r], dtype=np.float32), next_o)
             if self.scripted_policy:
@@ -258,6 +260,7 @@ class RolloutWorker:
             else:
                 observations.append(o)
             task_indicators.append(task_indicator)
+            base_task_indicators.append(base_task_indicator)
             rewards.append(r)
             terminals.append(d)
             actions.append(a)
@@ -277,17 +280,21 @@ class RolloutWorker:
                 break
 
         agent_input = self.build_encoder_input(next_o, self.context, action_space)
-        next_task_indicator = self.agent.get_action(agent_input, next_o, deterministic=deterministic, env=self.env)[1]
+        _, next_task_indicator, next_base_task_indicator = \
+            self.agent.get_action(agent_input, next_o, deterministic=deterministic, env=self.env)
         actions = np.array(actions)
         if len(actions.shape) == 1:
             actions = np.expand_dims(actions, 1)
         observations = np.array(observations)
         task_indicators = np.array(task_indicators)
+        base_task_indicators = np.array(base_task_indicators)
         if len(observations.shape) == 1:
             observations = np.expand_dims(observations, 1)
-            task_indicators.np.expand_dim(task_indicators, 1)
+            task_indicators = np.expand_dim(task_indicators, 1)
+            base_task_indicators = np.expand_dim(base_task_indicators, 1)
             next_o = np.array([next_o])
             next_task_indicator = np.array([next_task_indicator])
+            next_base_task_indicator = np.array([next_base_task_indicator])
         next_observations = np.vstack(
             (
                 observations[1:, :],
@@ -300,16 +307,24 @@ class RolloutWorker:
                 np.expand_dims(next_task_indicator, 0)
             )
         )
+        next_base_task_indicators = np.concatenate(
+            (
+                base_task_indicators[1:],
+                np.expand_dims(next_base_task_indicator, 0)
+            )
+        )
 
         true_tasks = [env_infos[i]['true_task'] for i in range(len(env_infos))]
 
         return dict(
             observations=observations,
             task_indicators=task_indicators,
+            base_task_indicators=base_task_indicators,
             actions=actions,
             rewards=np.array(rewards).reshape(-1, 1),
             next_observations=next_observations,
             next_task_indicators=next_task_indicators,
+            next_base_task_indicators=next_base_task_indicators,
             terminals=np.array(terminals).reshape(-1, 1),
             agent_infos=agent_infos,
             env_infos=env_infos,

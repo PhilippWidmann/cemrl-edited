@@ -16,6 +16,7 @@ class StackedReplayBuffer:
         self._rewards = np.zeros((max_replay_buffer_size, 1), dtype=np.float32)
         # task indicator computed through encoder
         self._base_task_indicators = np.zeros(max_replay_buffer_size, dtype=np.float32)
+        self._next_base_task_indicators = np.zeros(max_replay_buffer_size, dtype=np.float32)
         self._task_indicators = np.zeros((max_replay_buffer_size, task_indicator_dim), dtype=np.float32)
         self._next_task_indicators = np.zeros((max_replay_buffer_size, task_indicator_dim), dtype=np.float32)
         self._true_task = np.zeros((max_replay_buffer_size, 1), dtype=object)  # filled with dicts with keys 'base', 'specification'
@@ -59,10 +60,11 @@ class StackedReplayBuffer:
                 np.zeros(self._observation_dim),
                 np.zeros(self._task_indicator_dim),
                 np.zeros(self._task_indicator_dim),
+                np.zeros(self._task_indicator_dim),
+                np.zeros(self._task_indicator_dim),
                 np.zeros(1)
-                #env_info=dict(sparse_reward=0)
+                # env_info=dict(sparse_reward=0)
             )
-
 
     def add_episode(self, episode):
         """
@@ -94,7 +96,9 @@ class StackedReplayBuffer:
         self._actions[low:high] = episode['actions']
         self._rewards[low:high] = episode['rewards']
         self._task_indicators[low:high] = episode['task_indicators']
+        self._base_task_indicators[low:high] = episode['base_task_indicators']
         self._next_task_indicators[low:high] = episode['next_task_indicators']
+        self._next_base_task_indicators[low:high] = episode['next_base_task_indicators']
         self._terminals[low:high] = episode['terminals']
         self._true_task[low:high] = episode['true_tasks']
 
@@ -102,13 +106,16 @@ class StackedReplayBuffer:
         self.terminate_episode()
 
     def add_sample(self, observation, action, reward, terminal,
-                   next_observation, task_indicator, next_task_indicator, true_task, **kwargs):
+                   next_observation, task_indicator, base_task_indicator,
+                   next_task_indicator, next_base_task_indicator, true_task, **kwargs):
         self._observations[self._top] = observation
         self._next_obs[self._top] = next_observation
         self._actions[self._top] = action
         self._rewards[self._top] = reward
         self._task_indicators[self._top] = task_indicator
+        self._base_task_indicators[self._top] = base_task_indicator
         self._next_task_indicators[self._top] = next_task_indicator
+        self._next_base_task_indicators[self._top] = next_base_task_indicator
         self._terminals[self._top] = terminal
         self._true_task[self._top] = true_task
 
@@ -149,8 +156,9 @@ class StackedReplayBuffer:
             actions=self._actions[indices],
             rewards=self._rewards[indices],
             task_indicators=self._task_indicators[indices],
-            next_task_indicators=self._next_task_indicators[indices],
             base_task_indicators=self._base_task_indicators[indices],
+            next_task_indicators=self._next_task_indicators[indices],
+            next_base_task_indicators=self._next_base_task_indicators[indices],
             sparse_rewards=self._sparse_rewards[indices],
             terminals=self._terminals[indices],
             true_tasks=self._true_task[indices]
@@ -218,11 +226,12 @@ class StackedReplayBuffer:
 
     # Relabeler util function
 
-    def relabel_z(self, start, batch_size, z, next_z, y):
+    def relabel_z(self, start, batch_size, z, next_z, y, next_y):
         points = self._allowed_points[start:start + batch_size]
         self._task_indicators[points] = z
         self._next_task_indicators[points] = next_z
         self._base_task_indicators[points] = y
+        self._next_base_task_indicators[points] = next_y
 
     def get_train_val_indices(self, train_val_percent):
         # Split all data from replay buffer into training and validation set
