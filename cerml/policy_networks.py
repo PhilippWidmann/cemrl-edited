@@ -1,10 +1,37 @@
+from abc import ABC, abstractmethod
 import torch
 import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.networks import FlattenMlp, Mlp
 from rlkit.torch.sac.policies import TanhGaussianPolicy
 
 
-class SingleSAC:
+class SACNetworks(ABC):
+    @abstractmethod
+    def forward(self, network, state, task_indicator, base_task_indicator, actions=None, **kwargs):
+        pass
+
+    @abstractmethod
+    def soft_target_update(self, soft_target_tau):
+        pass
+
+    @abstractmethod
+    def get_action(self, state, task_indicator, base_task_indicator, deterministic=False):
+        pass
+
+    @abstractmethod
+    def to(self, device, network=None):
+        pass
+
+    @abstractmethod
+    def networks(self):
+        pass
+
+    @abstractmethod
+    def get_snapshot(self):
+        pass
+
+
+class SingleSAC(SACNetworks):
     def __init__(self,
                  obs_dim,
                  latent_dim,

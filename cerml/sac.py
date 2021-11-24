@@ -10,7 +10,7 @@ from torch import nn as nn
 import gtimer as gt
 
 import rlkit.torch.pytorch_util as ptu
-from cerml.policy_networks import SingleSAC
+from cerml.policy_networks import SACNetworks
 from rlkit.core.eval_util import create_stats_ordered_dict
 
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 class PolicyTrainer:
     def __init__(
             self,
-            policy_networks: SingleSAC,
+            policy_networks: SACNetworks,
 
             replay_buffer,
             batch_size,
@@ -165,7 +165,9 @@ class PolicyTrainer:
         # new_task_z = torch.zeros_like(new_task_z)
         # task_z = torch.from_numpy(batch['true_tasks'])
         # new_task_z = torch.cat([task_z[1:,:], task_z[-1,:].view(1,1)])
+
         # Todo: We overwrite the new task here. Is this really intentional?
+        # It seems to work better, but why?
         new_task_z = task_z.clone().detach()
         new_task_y = task_y.clone().detach()
 
