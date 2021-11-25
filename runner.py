@@ -8,7 +8,7 @@ import json
 import torch
 import torch.nn as nn
 
-from cerml.policy_networks import SingleSAC
+from cerml.policy_networks import SingleSAC, MultipleSAC
 from rlkit.envs import ENVS
 from rlkit.envs.wrappers import NormalizedBoxEnv, CameraWrapper
 from rlkit.torch.sac.policies import TanhGaussianPolicy
@@ -104,18 +104,29 @@ def experiment(variant):
 
     prior_pz = PriorPz(num_classes, latent_dim)
 
-    policy_networks = SingleSAC(
-        obs_dim,
-        latent_dim,
-        action_dim,
-        variant['algo_params']['sac_layer_size']
-    )
+    if variant['algo_params']['policy_mode'] == 'sac_single':
+        policy_networks = SingleSAC(
+            obs_dim,
+            latent_dim,
+            action_dim,
+            variant['algo_params']['sac_layer_size']
+        )
+    elif variant['algo_params']['policy_mode'] == 'sac_multiple':
+        policy_networks = MultipleSAC(
+            obs_dim,
+            latent_dim,
+            action_dim,
+            variant['algo_params']['sac_layer_size'],
+            variant['algo_params']['num_policy_nets']
+        )
+    else:
+        raise ValueError(f"{variant['algo_params']['policy_mode']} is not a valid policy_mode")
 
     networks = {
         'encoder': encoder,
         'prior_pz': prior_pz,
         'decoder': decoder,
-        **policy_networks.get_snapshot()
+        **policy_networks.get_networks()
     }
 
     # optionally load pre-trained weights

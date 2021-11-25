@@ -22,6 +22,8 @@ default_config = dict(
     ),
 
     algo_params=dict(
+        policy_mode='sac_multiple',
+        num_policy_nets=2,
         use_relabeler=True, # if data should be relabeled
         use_combination_trainer=False,  # if combination trainer (gradients from Decoder and SAC should be used, currently broken
         use_data_normalization=True,  # if data become normalized, set in correspondence to use_combination_trainer

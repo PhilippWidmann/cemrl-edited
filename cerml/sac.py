@@ -68,7 +68,7 @@ class PolicyTrainer:
 
             if self.use_parametrized_alpha:
                 self.alpha_optimizer = optimizer_class(
-                    self.policy_networks.alpha_net.parameters(),
+                    self.policy_networks.get_network_parameters('alpha_net'),
                     lr=policy_lr,
                 )
             else:
@@ -86,15 +86,15 @@ class PolicyTrainer:
         self.vf_criterion = nn.MSELoss()
 
         self.policy_optimizer = optimizer_class(
-            self.policy_networks.policy.parameters(),
+            self.policy_networks.get_network_parameters('policy'),
             lr=policy_lr,
         )
         self.qf1_optimizer = optimizer_class(
-            self.policy_networks.qf1.parameters(),
+            self.policy_networks.get_network_parameters('qf1'),
             lr=qf_lr,
         )
         self.qf2_optimizer = optimizer_class(
-            self.policy_networks.qf2.parameters(),
+            self.policy_networks.get_network_parameters('qf2'),
             lr=qf_lr,
         )
 
@@ -330,7 +330,14 @@ class PolicyTrainer:
 
     @property
     def networks(self):
-        return self.policy_networks.networks()
+        d = self.policy_networks.get_networks()
+        return [
+            d['policy'],
+            d['qf1'],
+            d['qf2'],
+            d['target_qf1'],
+            d['target_qf2'],
+        ]
 
     def get_snapshot(self):
-        return self.policy_networks.get_snapshot()
+        return self.policy_networks.get_networks()
