@@ -22,13 +22,13 @@ default_config = dict(
     ),
 
     algo_params=dict(
-        policy_mode='sac_multiple',
-        num_policy_nets=2,
+        policy_mode='sac_single',
+        num_policy_nets=1,
         use_relabeler=True, # if data should be relabeled
         use_combination_trainer=False,  # if combination trainer (gradients from Decoder and SAC should be used, currently broken
         use_data_normalization=True,  # if data become normalized, set in correspondence to use_combination_trainer
         use_parametrized_alpha=False,  # alpha conditioned on z
-        encoding_mode="transitionIndividualY",  # choose encoder design: trajectory, transitionSharedY, transitionIndividualY
+        encoding_mode="transitionSharedY",  # choose encoder design: trajectory, transitionSharedY, transitionIndividualY
         merge_mode="add",  # if transitionSharedY: how to merge y infos: "add", "add_softmax", "multiply", "linear", "mlp"
         use_fixed_seeding=True,  # seeding, make comparison more robust
         seed=0,  # seed for torch and numpy
@@ -40,8 +40,7 @@ default_config = dict(
         latent_size=1,  # dimension of the latent context vector z
         sac_layer_size=300,  # layer size for SAC networks, value 300 taken from PEARL
         max_replay_buffer_size=10000000,  # write as integer!
-        data_usage_reconstruction=None,  # mode of data prioritization for reconstruction trainer, values: None, 'cut', 'linear, 'tree_sampling'
-        data_usage_sac=None,  # mode of data prioritization for policy trainer, values: None, 'cut', 'linear, 'tree_sampling'
+        sampling_mode=[None, 'linear'][0],  # determines how to choose samples from replay buffer
         num_last_samples=10000000,  # if data_usage_sac == 'cut, number of previous samples to be used
         permute_samples=False,  # if order of samples from previous timesteps should be permuted (avoid learning by heart)
         num_train_epochs=250,  # number of overall training epochs

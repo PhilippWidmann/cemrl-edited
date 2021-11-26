@@ -142,11 +142,9 @@ def experiment(variant):
         obs_dim,
         action_dim,
         latent_dim,
-        variant['algo_params']['data_usage_reconstruction'],
-        variant['algo_params']['data_usage_sac'],
-        variant['algo_params']['num_last_samples'],
         variant['algo_params']['permute_samples'],
-        variant['algo_params']['encoding_mode']
+        variant['algo_params']['encoding_mode'],
+        variant['algo_params']['sampling_mode']
     )
 
     #Agent
