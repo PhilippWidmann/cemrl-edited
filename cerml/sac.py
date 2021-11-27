@@ -204,6 +204,17 @@ class PolicyTrainer:
             gt.stamp('pt_alpha')
 
         """
+        Policy Loss
+        """
+        q_new_actions = torch.min(
+            self.policy_networks.forward('qf1', obs, task_z, task_y, new_obs_actions),
+            self.policy_networks.forward('qf2', obs, task_z, task_y, new_obs_actions),
+        )
+        if step == 0:
+            gt.stamp('pt_q_forward')
+        policy_loss = (alpha*log_pi - q_new_actions).mean()
+
+        """
         QF Loss
         """
         q1_pred = self.policy_networks.forward('qf1', obs, task_z, task_y, actions)
@@ -229,6 +240,16 @@ class PolicyTrainer:
             gt.stamp('pt_q_target')
 
         """
+        Update policy networks
+        """
+        self.policy_optimizer.zero_grad()
+        policy_loss.backward()
+        self.policy_optimizer.step()
+
+        if step == 0:
+            gt.stamp('pt_policy_update')
+
+        """
         Update QF networks
         """
         self.qf1_optimizer.zero_grad()
@@ -241,27 +262,6 @@ class PolicyTrainer:
 
         if step == 0:
             gt.stamp('pt_q_update')
-
-        """
-        Policy Loss
-        """
-        q_new_actions = torch.min(
-            self.policy_networks.forward('qf1', obs, task_z, task_y, new_obs_actions),
-            self.policy_networks.forward('qf2', obs, task_z, task_y, new_obs_actions),
-        )
-        if step == 0:
-            gt.stamp('pt_q_forward')
-        policy_loss = (alpha*log_pi - q_new_actions).mean()
-
-        """
-        Update policy networks
-        """
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
-
-        if step == 0:
-            gt.stamp('pt_policy_update')
 
         """
         Soft Updates
