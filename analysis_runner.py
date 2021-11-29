@@ -16,7 +16,7 @@ from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from configs.analysis_config import analysis_config
 
-
+from cerml.policy_networks import SingleSAC, MultipleSAC
 from cerml.encoder_decoder_networks import PriorPz, EncoderMixtureModelTrajectory, EncoderMixtureModelTransitionSharedY, EncoderMixtureModelTransitionIndividualY, DecoderMDP
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
@@ -110,49 +110,30 @@ def experiment(variant):
     # new
     prior_pz = PriorPz(num_classes, latent_dim)
 
-    M = variant['algo_params']['sac_layer_size']
-    qf1 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    qf2 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    target_qf1 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    target_qf2 = FlattenMlp(
-        input_size=(obs_dim + latent_dim) + action_dim,
-        output_size=1,
-        hidden_sizes=[M, M, M],
-    )
-    policy = TanhGaussianPolicy(
-        obs_dim=(obs_dim + latent_dim),
-        action_dim=action_dim,
-        latent_dim=latent_dim,
-        hidden_sizes=[M, M, M],
-    )
+    if variant['algo_params']['policy_mode'] == 'sac_single':
+        policy_networks = SingleSAC(
+            obs_dim,
+            latent_dim,
+            action_dim,
+            variant['algo_params']['sac_layer_size']
+        )
+    elif variant['algo_params']['policy_mode'] == 'sac_multiple':
+        policy_networks = MultipleSAC(
+            obs_dim,
+            latent_dim,
+            action_dim,
+            variant['algo_params']['sac_layer_size'],
+            variant['algo_params']['num_policy_nets']
+        )
+    else:
+        raise ValueError(f"{variant['algo_params']['policy_mode']} is not a valid policy_mode")
 
-    alpha_net = Mlp(
-        hidden_sizes=[latent_dim * 10],
-        input_size=latent_dim,
-        output_size=1
-    )
-
-    networks = {'encoder': encoder,
-                'prior_pz': prior_pz,
-                'decoder': decoder,
-                'qf1': qf1,
-                'qf2': qf2,
-                'target_qf1': target_qf1,
-                'target_qf2': target_qf2,
-                'policy': policy,
-                'alpha_net': alpha_net}
+    networks = {
+        'encoder': encoder,
+        'prior_pz': prior_pz,
+        'decoder': decoder,
+        **policy_networks.get_networks()
+    }
 
     # optionally load pre-trained weights
     if variant['path_to_weights'] is not None:
@@ -167,18 +148,16 @@ def experiment(variant):
         obs_dim,
         action_dim,
         latent_dim,
-        variant['algo_params']['data_usage_reconstruction'],
-        variant['algo_params']['data_usage_sac'],
-        variant['algo_params']['num_last_samples'],
         variant['algo_params']['permute_samples'],
-        variant['algo_params']['encoding_mode']
+        variant['algo_params']['encoding_mode'],
+        variant['algo_params']['sampling_mode']
     )
 
     #Agent
     agent = CEMRLAgent(
         encoder,
         prior_pz,
-        policy,
+        policy_networks,
     )
 
     # Rollout Coordinator
@@ -231,12 +210,7 @@ def experiment(variant):
 
     # PolicyTrainer
     policy_trainer = PolicyTrainer(
-        policy,
-        qf1,
-        qf2,
-        target_qf1,
-        target_qf2,
-        alpha_net,
+        policy_networks,
         replay_buffer,
         variant['algo_params']['batch_size_policy'],
         action_dim,
@@ -246,6 +220,8 @@ def experiment(variant):
         alpha=variant['algo_params']['sac_alpha']
     )
 
+    # Combination trainer not supported right now
+    """
     combination_trainer = CombinationTrainer(
         # from reconstruction trainer
         encoder,
@@ -277,7 +253,7 @@ def experiment(variant):
         target_entropy_factor=variant['algo_params']['target_entropy_factor']
         # stuff missing
     )
-
+    """
 
     relabeler = Relabeler(
         encoder,
@@ -293,7 +269,7 @@ def experiment(variant):
         replay_buffer,
         rollout_coordinator,
         reconstruction_trainer,
-        combination_trainer,
+        None,
         policy_trainer,
         relabeler,
         agent,
@@ -360,6 +336,29 @@ def experiment(variant):
     eval_average_reward = per_path_rewards.mean()
     print("Average reward: " + str(eval_average_reward))
 
+    if variant['env_name'].split('-')[-1] == 'dir' and variant['analysis_params']['plot_time_encoding']:
+        import matplotlib.pyplot as plt
+        figsize=None
+        cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        fig, axes_tuple = plt.subplots(nrows=3, ncols=1, sharex='col', gridspec_kw={'height_ratios': [1, 1, 1]}, figsize=figsize)
+        task_base = results[0][0][0][0]['base_task_indicators']
+        task = results[0][0][0][0]['task_indicators']
+        rewards = results[0][0][0][0]['rewards']
+        axes_tuple[0].plot(list(range(len(task_base))), task_base, color=cycle[0], label="base task")
+        #axes_tuple[1].plot(list(range(len(direction_goal))), np.sign(direction_is), color=cycle[1], label="direction")
+        axes_tuple[1].plot(list(range(len(task))), task, color=cycle[1], label="task")
+        axes_tuple[2].plot(list(range(len(rewards))), rewards, color=cycle[2], label="reward")
+        axes_tuple[0].grid()
+        axes_tuple[1].grid()
+        axes_tuple[2].grid()
+        axes_tuple[0].legend(loc='upper right')
+        axes_tuple[1].legend(loc='upper right')
+        axes_tuple[2].legend(loc='upper right')
+        axes_tuple[2].set_xlabel("time $t$")
+        plt.tight_layout()
+        if save:
+            plt.savefig(path_to_folder + '/' + variant['env_name'] + '_' + str(showcase_itr) + '_' + "task_embeddings_over_time" + ".pdf", dpi=300, bbox_inches='tight', format="pdf")
+        plt.show()
     # velocity plot
     if variant['env_name'].split('-')[-1] == 'vel' and variant['analysis_params']['plot_time_response']:
         import matplotlib.pyplot as plt
