@@ -22,8 +22,9 @@ __pycache__
 
 *live.ipynb
 
-/output
-/output/**
+/output/
+/output_analysis/
+/analysis/figures
 
 ## Subrepositories
 rand_param_envs

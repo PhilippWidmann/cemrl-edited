@@ -72,7 +72,7 @@ class RolloutCoordinator:
         if self.use_multiprocessing:
             # put on cpu before starting ray
             self.agent.to('cpu')
-            self.agent.policy.to('cpu', 'policy')
+            self.agent.policy.to('cpu')#, 'policy')
             self.agent.encoder.to('cpu')
             workers = [RemoteRolloutWorker.remote(None, self.env_name, self.env_args, self.train_or_showcase,
                                                   self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.encoding_mode, self.gpu_id, self.scripted_policy,
@@ -92,7 +92,7 @@ class RolloutCoordinator:
             ) for task in task_list] for worker, task_list in zip(workers, tasks_per_worker)]
 
         self.agent.to(ptu.device)
-        self.agent.policy.to(ptu.device, 'policy')
+        self.agent.policy.to(ptu.device)#, 'policy')
         self.agent.encoder.to(ptu.device)
         return results
 

@@ -173,6 +173,7 @@ class StackedReplayBuffer:
         data['terminals'][match_map] = 0.
 
         for key in data:
+            # Todo: This seems wrong, or at least dependent on points.shape[0] == batch_size ?
             data[key] = np.reshape(data[key], (batch_size, self.time_steps + 1, -1))
 
         return data
