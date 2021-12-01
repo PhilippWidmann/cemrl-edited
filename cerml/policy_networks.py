@@ -157,12 +157,12 @@ class MultipleSAC(SACNetworks):
                 else:
                     output_element = torch.zeros((state.shape[0], *output_list[0][i].shape[1:]),
                                                  device=output_list[0][i].device)
-                    for k in range(self.num_networks):
+                    for k in range(len(network_indicator_list)):
                         output_element[network_indicator_list[k]] = output_list[k][i]
                 output.append(output_element)
         else:
             output = torch.zeros((state.shape[0], *output_list[0].shape[1:]), device=output_list[0].device)
-            for k in range(self.num_networks):
+            for k in range(len(network_indicator_list)):
                 output[network_indicator_list[k]] = output_list[k]
 
         return output

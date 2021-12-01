@@ -5,7 +5,7 @@
         "n_eval_tasks": 50,
         "use_normalized_env": false,
         "ml10or45": 1,
-        "base_task": "pick-place-v1",
+        "base_task": "pick-place-v2",
         "state_reconstruction_clip": 12
     },
     "algo_params": {

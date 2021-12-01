@@ -7,6 +7,8 @@ import click
 import json
 import torch
 import torch.nn as nn
+import gym
+gym.logger.set_level(40)
 
 from cerml.policy_networks import SingleSAC, MultipleSAC
 from rlkit.envs import ENVS
@@ -40,7 +42,7 @@ def experiment(variant):
         np.random.seed(variant['algo_params']['seed'])
 
     # create logging directory
-    encoding_save_epochs = [0, 1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 50, 75, 100, 150, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450,
+    encoding_save_epochs = [0, 1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450,
                             475, 500, 600, 750, 1000, 1250, 1500, 1750, 2000, 3000, 5000, 10000, 15000, 20000]
     experiment_log_dir = setup_logger(variant['env_name'], variant=variant, exp_id=None,
                                       base_log_dir=variant['util_params']['base_log_dir'], snapshot_mode='specific',
@@ -319,7 +321,7 @@ def deep_update_dict(fr, to):
     return to
 
 @click.command()
-@click.argument('config', default="configs/cheetah-stationary-dir.json")#None)
+@click.argument('config', default="configs/others/metaworld-ml1-pick-and-place.json")  # "configs/cheetah-stationary-dir.json")#None)
 @click.option('--gpu', default=0)
 @click.option('--num_workers', default=4)
 @click.option('--use_mp', is_flag=True, default=False)
