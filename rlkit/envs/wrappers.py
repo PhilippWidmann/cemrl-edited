@@ -145,6 +145,11 @@ class CameraWrapper(object):
     def initialize_camera(self):
         # set camera parameters for viewing
         sim = self.sim
+
+        # This line is a bug-workaround for offscreen rendering on Ubuntu, with no actual function.
+        # In case of an error, try to remove this first
+        mujoco_py.GlfwContext(offscreen=True)
+
         viewer = mujoco_py.MjRenderContextOffscreen(sim)
         camera = viewer.cam
         camera.type = 1
