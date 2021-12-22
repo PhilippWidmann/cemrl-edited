@@ -1,3 +1,6 @@
+import gym
+gym.logger.set_level(40)
+
 import numpy as np
 import torch
 import ray
