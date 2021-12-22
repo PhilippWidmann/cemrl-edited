@@ -5,6 +5,7 @@ from . import register_env
 @register_env('metaworld')
 @register_env('metaworld-ml1-pick-and-place')
 @register_env('metaworld-ml1-reach')
+@register_env('metaworld-ml1-reach-observable')
 @register_env('metaworld-ml1-push')
 @register_env('metaworld-ml3')
 @register_env('metaworld-ml10')

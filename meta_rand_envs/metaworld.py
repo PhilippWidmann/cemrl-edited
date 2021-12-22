@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import metaworld
 import random
 import glfw
@@ -6,6 +8,31 @@ from meta_rand_envs.base import MetaEnvironment
 import meta_rand_envs.metaworld_benchmarks as mw_bench
 
 # based on repo master from https://github.com/rlworkgroup/metaworld on commit: 2020/10/29 @ 11:17PM, title " Update pick-place-v2 scripted-policy success (#251)", id: 5bcc76e1d455b8de34a044475c9ea3979ca53e2d
+
+
+class ObservableML1(metaworld.Benchmark):
+
+    ENV_NAMES = metaworld._ml1_env_names()
+
+    def __init__(self, env_name, seed=None):
+        super().__init__()
+        if not env_name in metaworld._env_dict.ALL_V2_ENVIRONMENTS:
+            raise ValueError(f"{env_name} is not a V2 environment")
+        cls = metaworld._env_dict.ALL_V2_ENVIRONMENTS[env_name]
+        self._train_classes = OrderedDict([(env_name, cls)])
+        self._test_classes = self._train_classes
+        self._train_ = OrderedDict([(env_name, cls)])
+        args_kwargs = metaworld._env_dict.ML1_args_kwargs[env_name]
+
+        self._train_tasks = metaworld._make_tasks(self._train_classes,
+                                        {env_name: args_kwargs},
+                                        dict(partially_observable=False),  # Cheating here: Make the goal position observable, essentialy removing the need for a latent representation
+                                        seed=seed)
+        self._test_tasks = metaworld._make_tasks(
+            self._test_classes, {env_name: args_kwargs},
+            dict(partially_observable=False),
+            seed=(seed + 1 if seed is not None else seed))
+
 
 class MetaWorldEnv(MetaEnvironment):
     def __init__(self, *args, **kwargs):
@@ -30,6 +57,10 @@ class MetaWorldEnv(MetaEnvironment):
         elif ml10or45 == 3:
             self.ml_env = mw_bench.ML3()
             num_train_tasks_per_base_task = int(kwargs['n_train_tasks'] / 3)
+            num_test_tasks_per_base_task = int(kwargs['n_eval_tasks'])
+        elif ml10or45 == '1_observable':
+            self.ml_env = ObservableML1(kwargs['base_task'])
+            num_train_tasks_per_base_task = int(kwargs['n_train_tasks'])
             num_test_tasks_per_base_task = int(kwargs['n_eval_tasks'])
         else:
             raise NotImplementedError
