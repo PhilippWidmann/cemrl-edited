@@ -181,7 +181,11 @@ def add_experiment_to_database(name, algo, env, date, description, algo_version,
         database[new_id]["n_timesteps"] = [float(i) for i in progress_dict["n_env_steps_total"]]
         database[new_id]["time"] = [float(i) for i in progress_dict["time_total"]]
         database[new_id]["trainAverageReturn"] = [float(i) for i in progress_dict["train_eval_avg_reward_deterministic"]]
+        database[new_id]["trainMaxReturn"] = [float(i) for i in progress_dict["train_eval_max_reward_deterministic"]]
+        database[new_id]["trainMinReturn"] = [float(i) for i in progress_dict["train_eval_min_reward_deterministic"]]
         database[new_id]["testAverageReturn"] = [float(i) for i in progress_dict["test_eval_avg_reward_deterministic"]]
+        database[new_id]["testMaxReturn"] = [float(i) for i in progress_dict["test_eval_max_reward_deterministic"]]
+        database[new_id]["testMinReturn"] = [float(i) for i in progress_dict["test_eval_min_reward_deterministic"]]
         if "train_eval_success_rate" in progress_dict:
             database[new_id]["trainSuccessRate"] = [float(i) for i in progress_dict["train_eval_success_rate"]]
         if "test_eval_success_rate" in progress_dict:

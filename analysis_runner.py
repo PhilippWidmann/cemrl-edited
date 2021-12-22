@@ -314,6 +314,8 @@ def experiment(variant):
     save = variant['analysis_params']['save']
 
     path_to_folder = variant['path_to_weights']
+    save_dir = variant['save_dir'] if variant['save_dir'] != '' else variant['path_to_weights']
+    variant['save_prefix'] = variant['save_prefix'] + '_' if variant['save_prefix'] != '' else ''
     replay_buffer.stats_dict = pickle.load(open(os.path.join(path_to_folder, "replay_buffer_stats_dict_" + str(showcase_itr) + ".p"), "rb"))
     env.reset_task(np.random.randint(len(env.test_tasks)) + len(env.train_tasks))
     env.set_meta_mode('test')
@@ -324,7 +326,7 @@ def experiment(variant):
 
     # plot encodings
     if variant['analysis_params']['plot_encoding']:
-        plot_encodings_split(showcase_itr, path_to_folder, save=save)
+        plot_encodings_split(showcase_itr, path_to_folder, save=save, save_dir=variant['save_dir'], save_prefix=variant['save_prefix'])
 
     # visualize test cases
     results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
@@ -357,7 +359,9 @@ def experiment(variant):
         axes_tuple[2].set_xlabel("time $t$")
         plt.tight_layout()
         if save:
-            plt.savefig(path_to_folder + '/' + variant['env_name'] + '_' + str(showcase_itr) + '_' + "task_embeddings_over_time" + ".pdf", dpi=300, bbox_inches='tight', format="pdf")
+            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                        "task_embeddings_over_time.png", dpi=300, bbox_inches='tight')
         plt.show()
     # velocity plot
     if variant['env_name'].split('-')[-1] == 'vel' and variant['analysis_params']['plot_time_response']:
@@ -378,7 +382,9 @@ def experiment(variant):
         plt.legend()
         plt.tight_layout()
         if save:
-            plt.savefig(path_to_folder + '/' + variant['env_name'] + '_' + str(showcase_itr) + '_' + "velocity_vs_goal_velocity_new" + ".pdf", dpi=300, format="pdf")
+            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                        "velocity_vs_goal_velocity_new.pdf", dpi=300)
         plt.show()
     if variant['env_name'].split('-')[-1] == 'dir' and variant['analysis_params']['plot_time_response']:
         import matplotlib.pyplot as plt
@@ -399,7 +405,9 @@ def experiment(variant):
         axes_tuple[1].set_xlabel("time $t$")
         plt.tight_layout()
         if save:
-            plt.savefig(path_to_folder + '/' + variant['env_name'] + '_' + str(showcase_itr) + '_' + "velocity_vs_goal_direction_new" + ".pdf", dpi=300, bbox_inches='tight', format="pdf")
+            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                        "velocity_vs_goal_direction_new.pdf", dpi=300, bbox_inches='tight')
         plt.show()
 
     if variant['env_name'].split('-')[-1] == 'vel' and variant['analysis_params']['plot_velocity_multi']:
@@ -432,13 +440,19 @@ def experiment(variant):
         #plt.title("cheetah-stationary-vel: velocity vs. goal velocity", fontsize=14)
         plt.tight_layout()
         if save:
-            plt.savefig(path_to_folder + '/' + variant['env_name'] + '_' + str(showcase_itr) + '_' + "multiple_velocity_vs_goal_velocity" + ".pdf", dpi=300, format="pdf")
+            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                        "multiple_velocity_vs_goal_velocity" + ".pdf", dpi=300, format="pdf")
         plt.show()
     # video taking
     if variant['analysis_params']['produce_video']:
         print("Producing video... do NOT kill program until completion!")
-        video_name_string = path_to_folder.split('/')[-1] + "_" + variant['env_name'] + ".mp4"
         results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test', deterministic=True, max_trajs=1, animated=False, save_frames=True)
+        if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
+            print('Success')
+        else:
+            print('Failure \nAborting')
+            return
         path_video = results[0][0][0][0]
         video_frames = []
         video_frames += [t['frame'] for t in path_video['env_infos']]
@@ -448,7 +462,9 @@ def experiment(variant):
         os.makedirs(temp_dir, exist_ok=True)
         for i, frm in enumerate(video_frames):
             frm.save(os.path.join(temp_dir, '%06d.jpg' % i))
-        video_filename = os.path.join(path_to_folder, video_name_string)
+        video_filename = os.path.join(save_dir,
+                                      variant['save_prefix'] + variant['env_name'] + '_testcase' + '_' + str(variant['analysis_params']['example_case']) +
+                                      '_' + 'itr-' + str(showcase_itr) + '_video.mp4')
         # run ffmpeg to make the video
         os.system('ffmpeg -r 25 -i {}/%06d.jpg -vb 20M -vcodec mpeg4 {}'.format(temp_dir, video_filename))
         # delete the frames
@@ -466,14 +482,21 @@ def deep_update_dict(fr, to):
     return to
 
 @click.command()
+@click.option('--weights', default=None)
+@click.option('--weights_itr', default=None)
 @click.option('--gpu', default=0)
 @click.option('--num_workers', default=8)
 @click.option('--use_mp', is_flag=True, default=False)
 @click.option('--docker', is_flag=True, default=False)
 @click.option('--debug', is_flag=True, default=False)
-def main(gpu, use_mp, num_workers, docker, debug):
+def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
 
     variant = analysis_config
+
+    if weights is not None:
+        variant['path_to_weights'] = weights
+    if weights_itr is not None:
+        variant['showcase_itr'] = weights_itr
 
     path_to_folder = variant['path_to_weights']
     with open(os.path.join(os.path.join(path_to_folder, 'variant.json'))) as f:
@@ -502,6 +525,12 @@ def main(gpu, use_mp, num_workers, docker, debug):
     # set other task number than while training
     if variant["analysis_params"]["manipulate_test_task_number"]:
         variant["env_params"]["n_eval_tasks"] = variant["analysis_params"]["test_task_number"]
+
+    # backwards compatibility Todo: Remove
+    if 'policy_mode' not in variant['algo_params'].keys():
+        variant['algo_params']['policy_mode'] = 'sac_single'
+    if 'sampling_mode' not in variant['algo_params'].keys():
+        variant['algo_params']['sampling_mode'] = None
 
     experiment(variant)
 

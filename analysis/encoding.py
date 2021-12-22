@@ -205,7 +205,7 @@ def plot_encodings_split_with_rewards_cheetah(epoch, exp_directory, save=False, 
     print("Created plot")
 
 
-def plot_encodings_split(epoch, exp_directory, save=False, normalize=False, legend=False):
+def plot_encodings_split(epoch, exp_directory, save=False, save_dir='', save_prefix='', normalize=False, legend=False):
     encoding_storage = pickle.load(open(os.path.join(exp_directory, "encoding_" + str(epoch) + ".p"), "rb"))
     base_tasks = list(encoding_storage.keys())
     if len(base_tasks) == 10:
@@ -284,7 +284,9 @@ def plot_encodings_split(epoch, exp_directory, save=False, normalize=False, lege
         axes_tuple[0][-1].legend(loc='center left', bbox_to_anchor=(1, 0.5), fancybox=True, shadow=True, fontsize=16)
         axes_tuple[1][-1].legend(loc='center left', bbox_to_anchor=(1, 0.5), fancybox=True, shadow=True, fontsize=16)
     if save:
-        fig.savefig(exp_directory + "/encoding_epoch_" + str(epoch) + ("_normalized" if normalize else "") + ".pdf", format="pdf", bbox_inches = "tight")
+        if save_dir == '':
+            save_dir = exp_directory
+        fig.savefig(save_dir + "/" + save_prefix + "encoding_epoch_" + str(epoch) + ("_normalized" if normalize else "") + ".pdf", format="pdf", bbox_inches = "tight")
     fig.show()
     print("Created plot")
 

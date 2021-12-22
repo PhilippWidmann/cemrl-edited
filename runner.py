@@ -321,13 +321,15 @@ def deep_update_dict(fr, to):
     return to
 
 @click.command()
-@click.argument('config', default="configs/others/metaworld-ml1-pick-and-place.json")  # "configs/cheetah-stationary-dir.json")#None)
+@click.argument('config', default="configs/others/metaworld-ml1-reach-v2-observable.json")#None)
+@click.option('--weights', default=None)
+@click.option('--weights_itr', default=None)
 @click.option('--gpu', default=0)
 @click.option('--num_workers', default=4)
 @click.option('--use_mp', is_flag=True, default=False)
 @click.option('--docker', is_flag=True, default=False)
 @click.option('--debug', is_flag=True, default=False)
-def main(config, gpu, use_mp, num_workers, docker, debug):
+def main(config, weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
 
     variant = default_config
 
@@ -339,6 +341,8 @@ def main(config, gpu, use_mp, num_workers, docker, debug):
     variant['util_params']['use_multiprocessing'] = use_mp
     variant['util_params']['num_workers'] = num_workers
 
+    variant['path_to_weights'] = weights
+    variant['showcase_itr'] = weights_itr
 
     experiment(variant)
 
