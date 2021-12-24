@@ -221,6 +221,8 @@ def experiment(variant):
         variant['algo_params']['batch_size_policy'],
         action_dim,
         variant['algo_params']['data_usage_sac'],
+        policy_lr=variant['algo_params']['lr_policy'],
+        qf_lr=variant['algo_params']['lr_qf'],
         use_parametrized_alpha=variant['algo_params']['use_parametrized_alpha'],
         target_entropy_factor=variant['algo_params']['target_entropy_factor'],
         alpha=variant['algo_params']['sac_alpha']

@@ -57,6 +57,8 @@ default_config = dict(
         max_path_length=200,  # maximum number of transitions per episode in the environment
         target_entropy_factor=1.0,  # target entropy from SAC
         sac_alpha=1.0,  # fixed alpha value in SAC when not using automatic entropy tuning
+        lr_policy=3e-4,  # learning rate for the policy network optimizer
+        lr_qf=3e-4  # learning rate for the q-function network optimizer
     ),
 
     reconstruction_params=dict(
