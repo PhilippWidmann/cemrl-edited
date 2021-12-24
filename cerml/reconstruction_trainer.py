@@ -411,3 +411,11 @@ class ReconstructionTrainer(nn.Module):
             return True
         else:
             return False
+
+
+class NoOpReconstructionTrainer:
+    def __init__(self):
+        pass
+
+    def train(self, epochs):
+        return

@@ -20,10 +20,11 @@ import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
 
 
-from cerml.encoder_decoder_networks import PriorPz, EncoderMixtureModelTrajectory, EncoderMixtureModelTransitionSharedY, EncoderMixtureModelTransitionIndividualY, DecoderMDP
+from cerml.encoder_decoder_networks import PriorPz, EncoderMixtureModelTrajectory, EncoderMixtureModelTransitionSharedY, \
+    EncoderMixtureModelTransitionIndividualY, DecoderMDP, NoOpEncoder
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
-from cerml.reconstruction_trainer import ReconstructionTrainer
+from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
 from cerml.combination_trainer import CombinationTrainer
 from cerml.rollout_worker import RolloutCoordinator
 from cerml.agent import CEMRLAgent, ScriptedPolicyAgent
@@ -82,6 +83,11 @@ def experiment(variant):
         encoder_input_dim = time_steps * (obs_dim + action_dim + reward_dim + obs_dim)
         shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
         encoder_model = EncoderMixtureModelTrajectory
+    elif variant['algo_params']['encoding_mode'] == 'noEncoding':
+        # debug case: completely omit any encoding and only do SAC training
+        encoder_input_dim = obs_dim + action_dim + reward_dim + obs_dim
+        shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
+        encoder_model = NoOpEncoder
     else:
         raise NotImplementedError
 
@@ -203,6 +209,9 @@ def experiment(variant):
         True if variant['algo_params']['encoding_mode'] == 'transitionIndividualY' else False,
         variant['algo_params']['data_usage_reconstruction'],
     )
+    if variant['algo_params']['encoding_mode'] == 'noEncoding':
+        # debug case: completely omit any encoding and only do SAC training
+        reconstruction_trainer = NoOpReconstructionTrainer()
 
 
     # PolicyTrainer
