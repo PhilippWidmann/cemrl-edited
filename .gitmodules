@@ -1,0 +1,6 @@
+[submodule "submodules/rand_param_envs"]
+	path = submodules/rand_param_envs
+	url = git@github.com:dennisl88/rand_param_envs.git
+[submodule "submodules/metaworld"]
+	path = submodules/metaworld
+	url = git@github.com:rlworkgroup/metaworld.git

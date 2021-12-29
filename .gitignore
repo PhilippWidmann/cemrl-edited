@@ -25,7 +25,3 @@ __pycache__
 /output/
 /output_analysis/
 /analysis/figures
-
-## Subrepositories
-rand_param_envs
-metaworld
