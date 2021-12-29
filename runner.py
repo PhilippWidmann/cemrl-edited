@@ -11,14 +11,10 @@ import gym
 gym.logger.set_level(40)
 
 from cerml.policy_networks import SingleSAC, MultipleSAC
-from rlkit.envs import ENVS
 from rlkit.envs.wrappers import NormalizedBoxEnv, CameraWrapper
-from rlkit.torch.sac.policies import TanhGaussianPolicy
-from rlkit.torch.networks import Mlp, FlattenMlp
 from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
-
 
 from cerml.encoder_decoder_networks import PriorPz, EncoderMixtureModelTrajectory, EncoderMixtureModelTransitionSharedY, \
     EncoderMixtureModelTransitionIndividualY, DecoderMDP, NoOpEncoder
@@ -30,6 +26,7 @@ from cerml.rollout_worker import RolloutCoordinator
 from cerml.agent import CEMRLAgent, ScriptedPolicyAgent
 from cerml.relabeler import Relabeler
 from cerml.cemrl_algorithm import CEMRLAlgorithm
+from meta_rand_envs.wrappers import ENVS
 
 import pickle
 

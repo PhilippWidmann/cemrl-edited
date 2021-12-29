@@ -8,9 +8,10 @@ import os
 
 from collections import OrderedDict
 
-from rlkit.envs import ENVS
 from rlkit.envs.wrappers import NormalizedBoxEnv, CameraWrapper
 import rlkit.torch.pytorch_util as ptu
+
+from meta_rand_envs.wrappers import ENVS
 
 
 class RolloutCoordinator:

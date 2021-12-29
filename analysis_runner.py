@@ -8,10 +8,7 @@ import json
 import torch
 import torch.nn as nn
 
-from rlkit.envs import ENVS
 from rlkit.envs.wrappers import NormalizedBoxEnv, CameraWrapper
-from rlkit.torch.sac.policies import TanhGaussianPolicy
-from rlkit.torch.networks import Mlp, FlattenMlp
 from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from configs.analysis_config import analysis_config
@@ -26,6 +23,7 @@ from cerml.rollout_worker import RolloutCoordinator
 from cerml.agent import CEMRLAgent
 from cerml.relabeler import Relabeler
 from cerml.cemrl_algorithm import CEMRLAlgorithm
+from meta_rand_envs.wrappers import ENVS
 
 import pickle
 
