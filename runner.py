@@ -105,6 +105,7 @@ def experiment(variant):
         latent_dim,
         net_complex_enc_dec,
         variant['env_params']['state_reconstruction_clip'],
+        variant['env_params']['use_state_decoder'],
     )
 
     prior_pz = PriorPz(num_classes, latent_dim)
@@ -197,6 +198,7 @@ def experiment(variant):
         variant['reconstruction_params']['use_state_diff'],
         variant['reconstruction_params']['component_constraint_learning'],
         variant['env_params']['state_reconstruction_clip'],
+        variant['env_params']['use_state_decoder'],
         variant['reconstruction_params']['train_val_percent'],
         variant['reconstruction_params']['eval_interval'],
         variant['reconstruction_params']['early_stopping_threshold'],

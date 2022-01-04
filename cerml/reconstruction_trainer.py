@@ -29,6 +29,7 @@ class ReconstructionTrainer(nn.Module):
                  use_state_diff,
                  component_constraint_learning,
                  state_reconstruction_clip,
+                 use_state_decoder,
                  train_val_percent,
                  eval_interval,
                  early_stopping_threshold,
@@ -55,6 +56,7 @@ class ReconstructionTrainer(nn.Module):
         self.use_state_diff = use_state_diff
         self.component_constraint_learning = component_constraint_learning
         self.state_reconstruction_clip = state_reconstruction_clip
+        self.use_state_decoder = use_state_decoder
         self.train_val_percent = train_val_percent
         self.eval_interval = eval_interval
         self.early_stopping_threshold = early_stopping_threshold
@@ -230,11 +232,15 @@ class ReconstructionTrainer(nn.Module):
 
                 # put in decoder to get likelihood
                 state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-                state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
                 reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
-                state_losses[:, :, y] = state_loss.unsqueeze(1).repeat(1, self.timesteps)
                 reward_losses[:, :, y] = reward_loss.unsqueeze(1).repeat(1, self.timesteps)
-                nll_px[:, :, y] = self.loss_weight_state * state_losses[:, :, y] + self.loss_weight_reward * reward_losses[:, :, y]
+
+                if self.use_state_decoder:
+                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
+                    state_losses[:, :, y] = state_loss.unsqueeze(1).repeat(1, self.timesteps)
+                    nll_px[:, :, y] = self.loss_weight_state * state_losses[:, :, y] + self.loss_weight_reward * reward_losses[:, :, y]
+                else:
+                    nll_px[:, :, y] = self.loss_weight_reward * reward_losses[:, :, y]
 
                 # KL ( q(z | x,y=k) || p(z|y=k) )
                 prior = self.prior_pz(y)
@@ -290,11 +296,16 @@ class ReconstructionTrainer(nn.Module):
 
                 # put in decoder to get likelihood
                 state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-                state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
                 reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
-                state_losses[:, y] = state_loss
                 reward_losses[:, y] = reward_loss
-                nll_px[:, y] = self.loss_weight_state * state_loss + self.loss_weight_reward * reward_loss
+
+                if self.use_state_decoder:
+                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
+                    state_losses[:, y] = state_loss
+                    nll_px[:, y] = self.loss_weight_state * state_loss + self.loss_weight_reward * reward_loss
+                else:
+                    nll_px[:, y] = self.loss_weight_reward * reward_loss
+
 
                 # KL ( q(z | x,y=k) || p(z|y=k) )
                 prior = self.prior_pz(y)
@@ -394,8 +405,11 @@ class ReconstructionTrainer(nn.Module):
 
         z, y = self.encoder(encoder_input)
         state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-        state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
         reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
+        if self.use_state_decoder:
+            state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
+        else:
+            state_loss = torch.tensor(0)
 
         return ptu.get_numpy(torch.sum(state_loss)) / self.batch_size, ptu.get_numpy(torch.sum(reward_loss))/ self.batch_size
 
