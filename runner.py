@@ -8,6 +8,9 @@ import json
 import torch
 import torch.nn as nn
 import gym
+
+from cerml.debug_encoding import EncodingDebugger
+
 gym.logger.set_level(40)
 
 from cerml.policy_networks import SingleSAC, MultipleSAC
@@ -227,6 +230,28 @@ def experiment(variant):
         alpha=variant['algo_params']['sac_alpha']
     )
 
+    # Encoding Debug information; not necessary if code is used in production
+    if variant['util_params']['debug_encoding']:
+        encoding_debugger = EncodingDebugger(
+            action_dim,
+            obs_dim,
+            reward_dim,
+            latent_dim,
+            net_complex_enc_dec,
+            encoder,
+            replay_buffer,
+            variant['algo_params']['batch_size_reconstruction'],
+            num_classes,
+            variant['reconstruction_params']['lr_decoder'],
+            variant['env_params']['state_reconstruction_clip'],
+            variant['reconstruction_params']['train_val_percent'],
+            variant['reconstruction_params']['eval_interval'],
+            variant['reconstruction_params']['early_stopping_threshold'],
+            experiment_log_dir,
+        )
+    else:
+        encoding_debugger = None
+
     # Combination trainer not supported right now
     """
     combination_trainer = CombinationTrainer(
@@ -300,7 +325,8 @@ def experiment(variant):
         variant['algo_params']['use_relabeler'],
         variant['algo_params']['use_combination_trainer'],
         experiment_log_dir,
-        latent_dim
+        latent_dim,
+        encoding_debugger,
         )
 
     if ptu.gpu_enabled():
@@ -331,7 +357,7 @@ def deep_update_dict(fr, to):
     return to
 
 @click.command()
-@click.argument('config', default="configs/others/metaworld-ml1-reach-v2-observable.json")#None)
+@click.argument('config', default="configs/cheetah-stationary-dir.json")#None)
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
