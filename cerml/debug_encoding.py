@@ -47,6 +47,7 @@ class EncodingDebugger:
                  z_dim,
                  net_complex,
                  encoder,
+                 decoder,
                  replay_buffer,
                  batch_size,
                  num_classes,
@@ -64,6 +65,7 @@ class EncodingDebugger:
         self.state_reconstruction_clip = state_reconstruction_clip
         self.num_classes = num_classes
         self.encoder = encoder
+        self.decoder = decoder
         self.experiment_log_dir = experiment_log_dir
         self.replay_buffer = replay_buffer
         self.eval_interval = eval_interval
@@ -92,6 +94,36 @@ class EncodingDebugger:
 
     def record_debug_info(self, decoder_reconstruction_steps):
         self.train_decoder(decoder_reconstruction_steps)
+        self.validate_z_dependency()
+
+    def validate_z_dependency(self):
+        all_ind, ind_temp = self.replay_buffer.get_train_val_indices(self.train_val_percent)
+        all_ind = np.concatenate((all_ind, ind_temp))
+        np.random.shuffle(all_ind)
+        val_batch_size = int(2**14)
+
+        reward_loss = torch.tensor(0.0, device=ptu.device)
+        for i in range(int(np.ceil(all_ind.size / val_batch_size))):
+            upper = min(all_ind.size, (i+1) * val_batch_size)
+            ind = list(range(i*val_batch_size, upper))
+            data = self.replay_buffer.sample_data(ind)
+
+            decoder_action = ptu.from_numpy(data['actions'])
+            decoder_state = ptu.from_numpy(data['observations'])
+            decoder_next_state = ptu.from_numpy(data['next_observations'])
+
+            # To simulate random z from the distribution, just change order
+            np.random.shuffle(data['task_indicators'])
+            decoder_z = ptu.from_numpy(data['task_indicators'])
+
+            decoder_reward = ptu.from_numpy(data['rewards'])
+
+            self.decoder.to(decoder_action.device)
+            _, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, decoder_z)
+            reward_loss += torch.sum((reward_estimate - decoder_reward) ** 2)
+
+        logger.record_tabular("Random_z_reconstruction_val_reward_loss",
+                              ptu.get_numpy(reward_loss) / all_ind.size)
 
     def train_decoder(self, epochs):
         train_indices, val_indices = self.replay_buffer.get_train_val_indices(self.train_val_percent)

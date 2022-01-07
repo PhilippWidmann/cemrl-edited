@@ -239,6 +239,7 @@ def experiment(variant):
             latent_dim,
             net_complex_enc_dec,
             encoder,
+            decoder,
             replay_buffer,
             variant['algo_params']['batch_size_reconstruction'],
             num_classes,
