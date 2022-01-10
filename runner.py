@@ -334,9 +334,9 @@ def deep_update_dict(fr, to):
 @click.argument('config', default="configs/others/metaworld-ml1-reach-v2-observable.json")#None)
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
-@click.option('--gpu', default=0)
-@click.option('--num_workers', default=4)
-@click.option('--use_mp', is_flag=True, default=False)
+@click.option('--gpu', default=None, type=int)
+@click.option('--num_workers', default=None, type=int)
+@click.option('--use_mp', default=None, type=bool)
 @click.option('--docker', is_flag=True, default=False)
 @click.option('--debug', is_flag=True, default=False)
 def main(config, weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
@@ -347,12 +347,18 @@ def main(config, weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
         with open(os.path.join(config)) as f:
             exp_params = json.load(f)
         variant = deep_update_dict(exp_params, variant)
-    variant['util_params']['gpu_id'] = gpu
-    variant['util_params']['use_multiprocessing'] = use_mp
-    variant['util_params']['num_workers'] = num_workers
 
-    variant['path_to_weights'] = weights
-    variant['showcase_itr'] = weights_itr
+    # Overwrite machine defaults only when explicitly given
+    if gpu is not None:
+        variant['util_params']['gpu_id'] = gpu
+    if num_workers is not None:
+        variant['util_params']['num_workers'] = num_workers
+    if use_mp is not None:
+        variant['util_params']['use_multiprocessing'] = use_mp
+    if weights is not None:
+        variant['path_to_weights'] = weights
+    if weights_itr is not None:
+        variant['showcase_itr'] = weights_itr
 
     experiment(variant)
 
