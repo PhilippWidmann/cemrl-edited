@@ -360,7 +360,7 @@ def deep_update_dict(fr, to):
     return to
 
 @click.command()
-@click.argument('config', default="configs/cheetah-stationary-dir.json")#None)
+@click.argument('config', default="configs/debug-cheetah.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
