@@ -37,6 +37,7 @@ default_config = dict(
         use_fixed_seeding=True,  # seeding, make comparison more robust
         seed=0,  # seed for torch and numpy
         batch_size_reconstruction=256,  # batch size reconstruction trainer
+        batch_size_validation=4096,  # batch size for the encoder-decoder validation
         batch_size_combination=256,  # batch size combination trainer
         batch_size_policy=256,  # batch size policy trainer
         batch_size_relabel=1024,  # batch size relabeler

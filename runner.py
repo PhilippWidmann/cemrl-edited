@@ -191,6 +191,7 @@ def experiment(variant):
         prior_pz,
         replay_buffer,
         variant['algo_params']['batch_size_reconstruction'],
+        variant['algo_params']['batch_size_validation'],
         num_classes,
         latent_dim,
         time_steps,

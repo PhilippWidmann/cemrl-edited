@@ -19,6 +19,7 @@ class ReconstructionTrainer(nn.Module):
                  prior_pz_layer,
                  replay_buffer,
                  batch_size,
+                 validation_batch_size,
                  num_classes,
                  latent_dim,
                  timesteps,
@@ -46,6 +47,7 @@ class ReconstructionTrainer(nn.Module):
         self.prior_pz_layer = prior_pz_layer
         self.replay_buffer = replay_buffer
         self.batch_size = batch_size
+        self.validation_batch_size = validation_batch_size
         self.num_classes = num_classes
         self.latent_dim = latent_dim
         self.timesteps = timesteps
@@ -388,10 +390,10 @@ class ReconstructionTrainer(nn.Module):
 
     def validate(self, indices):
         # get data from replay buffer
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=True)
+        data = self.replay_buffer.sample_random_few_step_batch(indices, self.validation_batch_size, normalize=True)
 
         # prepare for usage in encoder
-        encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
+        encoder_input = self.replay_buffer.make_encoder_data(data, self.validation_batch_size)
         # prepare for usage in decoder
         decoder_action = ptu.from_numpy(data['actions'])[:, -1, :]
         decoder_state = ptu.from_numpy(data['observations'])[:, -1, :]
@@ -411,7 +413,8 @@ class ReconstructionTrainer(nn.Module):
         else:
             state_loss = torch.tensor(0)
 
-        return ptu.get_numpy(torch.sum(state_loss)) / self.batch_size, ptu.get_numpy(torch.sum(reward_loss))/ self.batch_size
+        return ptu.get_numpy(torch.sum(state_loss)) / self.validation_batch_size, \
+               ptu.get_numpy(torch.sum(reward_loss)) / self.validation_batch_size
 
     def early_stopping(self, epoch, loss):
         if loss < self.lowest_loss:
