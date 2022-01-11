@@ -243,6 +243,7 @@ def experiment(variant):
             decoder,
             replay_buffer,
             variant['algo_params']['batch_size_reconstruction'],
+            variant['algo_params']['batch_size_validation'],
             num_classes,
             variant['reconstruction_params']['lr_decoder'],
             variant['env_params']['state_reconstruction_clip'],

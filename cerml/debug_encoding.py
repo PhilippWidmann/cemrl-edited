@@ -142,6 +142,7 @@ class EncodingDebugger:
                  decoder,
                  replay_buffer,
                  batch_size,
+                 validation_batch_size,
                  num_classes,
                  lr_decoder,
                  state_reconstruction_clip,
@@ -164,6 +165,7 @@ class EncodingDebugger:
         self.lr_decoder = lr_decoder
         self.optimizer_class = optimizer_class
         self.early_stopping_threshold = early_stopping_threshold
+        self.validation_batch_size = validation_batch_size
 
         self.factor_state_loss = 1
         self.factor_reward_loss = self.state_reconstruction_clip
@@ -187,44 +189,70 @@ class EncodingDebugger:
     def record_debug_info(self, decoder_reconstruction_steps):
         self.train_decoder(decoder_reconstruction_steps)
         self.validate_z_dependency()
-        self.compute_mi_scores()
+        self.compute_mi_scores(repetitions=5)
 
-    def compute_mi_scores(self):
+    def compute_mi_scores(self, repetitions=1):
         all_ind, ind_temp = self.replay_buffer.get_train_val_indices(self.train_val_percent)
         all_ind = np.concatenate((all_ind, ind_temp))
 
-        val_batch_size = min(int(2 ** 12), len(all_ind))
+        val_batch_size = min(self.validation_batch_size, len(all_ind))
 
-        data = self.replay_buffer.sample_random_few_step_batch(all_ind, val_batch_size, normalize=True)
+        mi_z_base, mi_z_spec, mi_z_r = [], [], []
+        mi_y_base, mi_y_spec, mi_y_r = [], [], []
+        mi_r_base, mi_r_spec = [], []
+        for i in range(repetitions):
+            data = self.replay_buffer.sample_random_few_step_batch(all_ind, val_batch_size, normalize=True)
 
-        encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
-        y_distribution, z_distribution = self.encoder.encode(encoder_input)
-        z, y = self.encoder.sample_z(y_distribution, z_distribution, y_usage='most_likely', sampler='mean')
-        z, y = ptu.get_numpy(z), ptu.get_numpy(y)
+            encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
+            y_distribution, z_distribution = self.encoder.encode(encoder_input)
+            z, y = self.encoder.sample_z(y_distribution, z_distribution, y_usage='most_likely', sampler='mean')
+            z, y = ptu.get_numpy(z), ptu.get_numpy(y)
 
-        true_task_base = np.array([d[-1, 0]['base_task'] for d in data['true_tasks']])
-        true_task_spec = pd.array([d[-1, 0]['specification'] for d in data['true_tasks']], dtype='category')
-        r = data['rewards'][:, -1, :]
+            true_task_base = np.array([d[-1, 0]['base_task'] for d in data['true_tasks']])
+            true_task_spec = pd.array([d[-1, 0]['specification'] for d in data['true_tasks']], dtype='category')
+            r = data['rewards'][:, -1, :]
 
-        logger.record_tabular("MI(z, true_task_base)", mutual_information(z, true_task_base))
-        logger.record_tabular("MI(y, true_task_base)", mutual_information(y, true_task_base))
+            mi_z_base.append(mutual_information(z, true_task_base))
+            mi_z_spec.append(mutual_information(z, true_task_spec))
+            mi_z_r.append(mutual_information(z, r))
+            mi_y_base.append(mutual_information(y, true_task_base))
+            mi_y_spec.append(mutual_information(y, true_task_spec))
+            mi_y_r.append(mutual_information(y, r))
+            mi_r_base.append(mutual_information(r, true_task_base))
+            mi_r_spec.append(mutual_information(r, true_task_spec))
 
-        logger.record_tabular("MI(z, true_task_spec)", mutual_information(z, true_task_spec))
-        logger.record_tabular("MI(y, true_task_spec)", mutual_information(y, true_task_spec))
+        logger.record_tabular("MI(z, true_task_base)", np.median(mi_z_base))
+        logger.record_tabular("MI(z, true_task_spec)", np.median(mi_z_spec))
+        logger.record_tabular("MI(z, reward)", np.median(mi_z_r))
 
-        logger.record_tabular("MI(z, reward)", mutual_information(z, r))
-        logger.record_tabular("MI(y, reward)", mutual_information(y, r))
+        logger.record_tabular("MI(y, true_task_base)", np.median(mi_y_base))
+        logger.record_tabular("MI(y, true_task_spec)", np.median(mi_y_spec))
+        logger.record_tabular("MI(y, reward)", np.median(mi_y_r))
+
+        logger.record_tabular("MI(r, true_task_base)", np.median(mi_r_base))
+        logger.record_tabular("MI(r, true_task_spec)", np.median(mi_r_spec))
+
+        if repetitions > 1:
+            logger.record_tabular("ALL_MI(z, true_task_base)", np.sort(mi_z_base))
+            logger.record_tabular("ALL_MI(z, true_task_spec)", np.sort(mi_z_spec))
+            logger.record_tabular("ALL_MI(z, reward)", np.sort(mi_z_r))
+
+            logger.record_tabular("ALL_MI(y, true_task_base)", np.sort(mi_y_base))
+            logger.record_tabular("ALL_MI(y, true_task_spec)", np.sort(mi_y_spec))
+            logger.record_tabular("ALL_MI(y, reward)", np.sort(mi_y_r))
+
+            logger.record_tabular("ALL_MI(r, true_task_base)", np.sort(mi_r_base))
+            logger.record_tabular("ALL_MI(r, true_task_spec)", np.sort(mi_r_spec))
 
     def validate_z_dependency(self):
         all_ind, ind_temp = self.replay_buffer.get_train_val_indices(self.train_val_percent)
         all_ind = np.concatenate((all_ind, ind_temp))
         np.random.shuffle(all_ind)
-        val_batch_size = int(2**12)
 
         reward_loss = torch.tensor(0.0, device=ptu.device)
-        for i in range(int(np.ceil(all_ind.size / val_batch_size))):
-            upper = min(all_ind.size, (i+1) * val_batch_size)
-            ind = list(range(i*val_batch_size, upper))
+        for i in range(int(np.ceil(all_ind.size / self.validation_batch_size))):
+            upper = min(all_ind.size, (i+1) * self.validation_batch_size)
+            ind = list(range(i * self.validation_batch_size, upper))
             data = self.replay_buffer.sample_data(ind)
 
             decoder_action = ptu.from_numpy(data['actions'])
