@@ -18,6 +18,10 @@ from rlkit.core import logger
 def mutual_information(x, y, n_neighbors=5):
     if is_integer_dtype(x.dtype) or is_categorical_dtype(x.dtype):
         if is_integer_dtype(y.dtype) or is_categorical_dtype(y.dtype):
+            x = pd.array(x, dtype='category')
+            y = pd.array(y, dtype='category')
+            x = x.rename_categories(list(range(len(x.categories))))
+            y = y.rename_categories(list(range(len(y.categories))))
             return np.log2(np.e) * max(sklearn.metrics.mutual_info_score(x, y), 0.0)
         elif is_float_dtype(y.dtype):
             x = pd.array(x, dtype='category')
