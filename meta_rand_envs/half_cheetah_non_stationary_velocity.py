@@ -66,3 +66,16 @@ class HalfCheetahNonStationaryVelocityEnv(NonStationaryGoalVelocityEnv, MujocoEn
         self.recolor()
         self.steps = 0
         self.reset()
+
+
+class HalfCheetahNonStationaryVelocityEnvObservable(HalfCheetahNonStationaryVelocityEnv):
+    def __init__(self, *args, **kwargs):
+        super(HalfCheetahNonStationaryVelocityEnvObservable, self).__init__(*args, **kwargs)
+
+    def _get_obs(self):
+        return np.concatenate([
+            self.sim.data.qpos.flat[1:],
+            self.get_body_com("torso").flat,
+            self.sim.data.qvel.flat,
+            np.array([self.active_task])
+        ]).astype(np.float32).flatten()

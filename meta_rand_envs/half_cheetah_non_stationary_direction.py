@@ -65,3 +65,50 @@ class HalfCheetahNonStationaryDirectionEnv(NonStationaryGoalDirectionEnv, Mujoco
         self.recolor()
         self.steps = 0
         self.reset()
+
+
+class HalfCheetahNonStationaryDirectionEnvObservable(HalfCheetahNonStationaryDirectionEnv):
+    def __init__(self, *args, **kwargs):
+        super(HalfCheetahNonStationaryDirectionEnvObservable, self).__init__(*args, **kwargs)
+
+    def _get_obs(self):
+        return np.concatenate([
+            self.sim.data.qpos.flat[1:],
+            self.get_body_com("torso").flat,
+            self.sim.data.qvel.flat,
+            np.array([self.active_task])
+        ]).astype(np.float32).flatten()
+
+
+class HalfCheetahNonStationaryDirectionEnvObservable2(HalfCheetahNonStationaryDirectionEnv):
+    def __init__(self, *args, **kwargs):
+        super(HalfCheetahNonStationaryDirectionEnvObservable2, self).__init__(*args, **kwargs)
+
+    def step(self, action):
+        self.check_env_change()
+
+        xposbefore = self.sim.data.qpos[0]
+        self.do_simulation(action, self.frame_skip)
+        xposafter = self.sim.data.qpos[0]
+        reward_run = (xposafter - xposbefore) / self.dt * self.active_task
+        reward_ctrl = -0.5 * 1e-1 * np.sum(np.square(action))
+        reward = reward_ctrl * 1.0 + reward_run
+        ob = self._get_obs(reward=reward)
+        # compared to gym original, we have the possibility to terminate, if the cheetah lies on the back
+        if self.termination_possible:
+            state = self.state_vector()
+            notdone = np.isfinite(state).all() and state[2] >= -2.5 and state[2] <= 2.5
+            done = not notdone
+        else:
+            done = False
+        self.steps += 1
+        return ob, reward, done, dict(reward_run=reward_run, reward_ctrl=reward_ctrl,
+                                      true_task=dict(base_task=0, specification=self.active_task), direction=(xposafter - xposbefore))
+
+    def _get_obs(self, reward=0):
+        return np.concatenate([
+            self.sim.data.qpos.flat[1:],
+            self.get_body_com("torso").flat,
+            self.sim.data.qvel.flat,
+            np.array([self.active_task, reward])
+        ]).astype(np.float32).flatten()

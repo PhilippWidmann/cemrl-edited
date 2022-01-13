@@ -232,7 +232,7 @@ def experiment(variant):
     )
 
     # Encoding Debug information; not necessary if code is used in production
-    if variant['util_params']['debug_encoding']:
+    if variant['util_params']['debug_encoding'] and (variant['algo_params']['encoding_mode'] != 'noEncoding'):
         encoding_debugger = EncodingDebugger(
             action_dim,
             obs_dim,
