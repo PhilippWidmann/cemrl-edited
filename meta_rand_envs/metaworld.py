@@ -5,6 +5,7 @@ import random
 import glfw
 import numpy as np
 from meta_rand_envs.base import MetaEnvironment
+from meta_rand_envs.metaworld_reach import ML1Reach
 import meta_rand_envs.metaworld_benchmarks as mw_bench
 
 # based on repo master from https://github.com/rlworkgroup/metaworld on commit: 2020/10/29 @ 11:17PM, title " Update pick-place-v2 scripted-policy success (#251)", id: 5bcc76e1d455b8de34a044475c9ea3979ca53e2d
@@ -60,6 +61,10 @@ class MetaWorldEnv(MetaEnvironment):
             num_test_tasks_per_base_task = int(kwargs['n_eval_tasks'])
         elif ml10or45 == '1_observable':
             self.ml_env = ObservableML1(kwargs['base_task'])
+            num_train_tasks_per_base_task = int(kwargs['n_train_tasks'])
+            num_test_tasks_per_base_task = int(kwargs['n_eval_tasks'])
+        elif ml10or45 == 'reach-special':
+            self.ml_env = ML1Reach(kwargs['base_task'])
             num_train_tasks_per_base_task = int(kwargs['n_train_tasks'])
             num_test_tasks_per_base_task = int(kwargs['n_eval_tasks'])
         else:
