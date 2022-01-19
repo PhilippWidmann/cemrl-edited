@@ -253,25 +253,26 @@ class EncodingDebugger:
         all_ind = np.concatenate((all_ind, ind_temp))
         np.random.shuffle(all_ind)
 
-        reward_loss = torch.tensor(0.0, device=ptu.device)
-        for i in range(int(np.ceil(all_ind.size / self.validation_batch_size))):
-            upper = min(all_ind.size, (i+1) * self.validation_batch_size)
-            ind = list(range(i * self.validation_batch_size, upper))
-            data = self.replay_buffer.sample_data(ind)
+        with torch.no_grad():
+            reward_loss = torch.tensor(0.0, device=ptu.device)
+            for i in range(int(np.ceil(all_ind.size / self.validation_batch_size))):
+                upper = min(all_ind.size, (i+1) * self.validation_batch_size)
+                ind = list(range(i * self.validation_batch_size, upper))
+                data = self.replay_buffer.sample_data(ind)
 
-            decoder_action = ptu.from_numpy(data['actions'])
-            decoder_state = ptu.from_numpy(data['observations'])
-            decoder_next_state = ptu.from_numpy(data['next_observations'])
+                decoder_action = ptu.from_numpy(data['actions'])
+                decoder_state = ptu.from_numpy(data['observations'])
+                decoder_next_state = ptu.from_numpy(data['next_observations'])
 
-            # To simulate random z from the distribution, just change order
-            np.random.shuffle(data['task_indicators'])
-            decoder_z = ptu.from_numpy(data['task_indicators'])
+                # To simulate random z from the distribution, just change order
+                np.random.shuffle(data['task_indicators'])
+                decoder_z = ptu.from_numpy(data['task_indicators'])
 
-            decoder_reward = ptu.from_numpy(data['rewards'])
+                decoder_reward = ptu.from_numpy(data['rewards'])
 
-            self.decoder.to(decoder_action.device)
-            _, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, decoder_z)
-            reward_loss += torch.sum((reward_estimate - decoder_reward) ** 2)
+                self.decoder.to(decoder_action.device)
+                _, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, decoder_z)
+                reward_loss += torch.sum((reward_estimate - decoder_reward) ** 2).detach()
 
         logger.record_tabular("Random_z_reconstruction_val_reward_loss",
                               ptu.get_numpy(reward_loss) / all_ind.size)
@@ -337,14 +338,15 @@ class EncodingDebugger:
         return ptu.get_numpy(loss)/self.batch_size
 
     def decoder_validate(self, indices):
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=True)
-        encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
-        decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
+        with torch.no_grad():
+            data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=True)
+            encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
+            decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
 
-        z, y = self.encoder(encoder_input)
-        reward_estimate = self.debug_decoder(z)
-        reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
-        return ptu.get_numpy(torch.sum(reward_loss)) / self.batch_size
+            z, y = self.encoder(encoder_input)
+            reward_estimate = self.debug_decoder(z)
+            reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
+            return ptu.get_numpy(torch.sum(reward_loss)) / self.batch_size
 
     def decoder_early_stopping(self, epoch, loss):
         if loss < self.lowest_loss:

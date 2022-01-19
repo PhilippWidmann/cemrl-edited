@@ -389,32 +389,33 @@ class ReconstructionTrainer(nn.Module):
             return torch.distributions.categorical.Categorical(probs=ptu.ones(self.batch_size, self.num_classes) * (1.0 / self.num_classes))
 
     def validate(self, indices):
-        # get data from replay buffer
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.validation_batch_size, normalize=True)
+        with torch.no_grad():
+            # get data from replay buffer
+            data = self.replay_buffer.sample_random_few_step_batch(indices, self.validation_batch_size, normalize=True)
 
-        # prepare for usage in encoder
-        encoder_input = self.replay_buffer.make_encoder_data(data, self.validation_batch_size)
-        # prepare for usage in decoder
-        decoder_action = ptu.from_numpy(data['actions'])[:, -1, :]
-        decoder_state = ptu.from_numpy(data['observations'])[:, -1, :]
-        decoder_next_state = ptu.from_numpy(data['next_observations'])[:, -1, :]
-        decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
+            # prepare for usage in encoder
+            encoder_input = self.replay_buffer.make_encoder_data(data, self.validation_batch_size)
+            # prepare for usage in decoder
+            decoder_action = ptu.from_numpy(data['actions'])[:, -1, :]
+            decoder_state = ptu.from_numpy(data['observations'])[:, -1, :]
+            decoder_next_state = ptu.from_numpy(data['next_observations'])[:, -1, :]
+            decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
 
-        if self.use_state_diff:
-            decoder_state_target = (decoder_next_state - decoder_state)[:, :self.state_reconstruction_clip]
-        else:
-            decoder_state_target = decoder_next_state[:, :self.state_reconstruction_clip]
+            if self.use_state_diff:
+                decoder_state_target = (decoder_next_state - decoder_state)[:, :self.state_reconstruction_clip]
+            else:
+                decoder_state_target = decoder_next_state[:, :self.state_reconstruction_clip]
 
-        z, y = self.encoder(encoder_input)
-        state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-        reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
-        if self.use_state_decoder:
-            state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
-        else:
-            state_loss = torch.tensor(0)
+            z, y = self.encoder(encoder_input)
+            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
+            reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
+            if self.use_state_decoder:
+                state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
+            else:
+                state_loss = torch.tensor(0)
 
-        return ptu.get_numpy(torch.sum(state_loss)) / self.validation_batch_size, \
-               ptu.get_numpy(torch.sum(reward_loss)) / self.validation_batch_size
+            return ptu.get_numpy(torch.sum(state_loss)) / self.validation_batch_size, \
+                   ptu.get_numpy(torch.sum(reward_loss)) / self.validation_batch_size
 
     def early_stopping(self, epoch, loss):
         if loss < self.lowest_loss:
