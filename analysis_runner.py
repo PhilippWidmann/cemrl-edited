@@ -8,16 +8,18 @@ import json
 import torch
 import torch.nn as nn
 
+from configs.default import default_config
 from rlkit.envs.wrappers import NormalizedBoxEnv, CameraWrapper
 from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from configs.analysis_config import analysis_config
 
 from cerml.policy_networks import SingleSAC, MultipleSAC
-from cerml.encoder_decoder_networks import PriorPz, EncoderMixtureModelTrajectory, EncoderMixtureModelTransitionSharedY, EncoderMixtureModelTransitionIndividualY, DecoderMDP
+from cerml.encoder_decoder_networks import PriorPz, EncoderMixtureModelTrajectory, EncoderMixtureModelTransitionSharedY, \
+    EncoderMixtureModelTransitionIndividualY, DecoderMDP, NoOpEncoder
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
-from cerml.reconstruction_trainer import ReconstructionTrainer
+from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
 from cerml.combination_trainer import CombinationTrainer
 from cerml.rollout_worker import RolloutCoordinator
 from cerml.agent import CEMRLAgent
@@ -81,6 +83,11 @@ def experiment(variant):
         encoder_input_dim = time_steps * (obs_dim + action_dim + reward_dim + obs_dim)
         shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
         encoder_model = EncoderMixtureModelTrajectory
+    elif variant['algo_params']['encoding_mode'] == 'noEncoding':
+        # debug case: completely omit any encoding and only do SAC training
+        encoder_input_dim = obs_dim + action_dim + reward_dim + obs_dim
+        shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
+        encoder_model = NoOpEncoder
     else:
         raise NotImplementedError
 
@@ -186,6 +193,7 @@ def experiment(variant):
         prior_pz,
         replay_buffer,
         variant['algo_params']['batch_size_reconstruction'],
+        variant['algo_params']['batch_size_validation'],
         num_classes,
         latent_dim,
         time_steps,
@@ -206,6 +214,9 @@ def experiment(variant):
         True if variant['algo_params']['encoding_mode'] == 'transitionIndividualY' else False,
         variant['algo_params']['data_usage_reconstruction'],
     )
+    if variant['algo_params']['encoding_mode'] == 'noEncoding':
+        # debug case: completely omit any encoding and only do SAC training
+        reconstruction_trainer = NoOpReconstructionTrainer()
 
 
     # PolicyTrainer
@@ -292,7 +303,8 @@ def experiment(variant):
         variant['algo_params']['use_relabeler'],
         variant['algo_params']['use_combination_trainer'],
         experiment_log_dir,
-        latent_dim
+        latent_dim,
+        encoding_debugger=None
         )
 
     if ptu.gpu_enabled():
@@ -310,11 +322,13 @@ def experiment(variant):
 
     # showcase learned policy loaded
     showcase_itr = variant['showcase_itr']
-    example_case = variant['analysis_params']['example_case']
+    example_cases = variant['analysis_params']['example_cases']
     save = variant['analysis_params']['save']
 
     path_to_folder = variant['path_to_weights']
     save_dir = variant['save_dir'] if variant['save_dir'] != '' else variant['path_to_weights']
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
     variant['save_prefix'] = variant['save_prefix'] + '_' if variant['save_prefix'] != '' else ''
     replay_buffer.stats_dict = pickle.load(open(os.path.join(path_to_folder, "replay_buffer_stats_dict_" + str(showcase_itr) + ".p"), "rb"))
     env.reset_task(np.random.randint(len(env.test_tasks)) + len(env.train_tasks))
@@ -329,146 +343,170 @@ def experiment(variant):
         plot_encodings_split(showcase_itr, path_to_folder, save=save, save_dir=variant['save_dir'], save_prefix=variant['save_prefix'])
 
     # visualize test cases
-    results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
-            deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False)
+    for example_case in example_cases:
+        results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
+                deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False)
 
-    # Reward for this run
-    per_path_rewards = [np.sum(path["rewards"]) for worker in results for task in worker for path in task[0]]
-    per_path_rewards = np.array(per_path_rewards)
-    eval_average_reward = per_path_rewards.mean()
-    print("Average reward: " + str(eval_average_reward))
+        # Reward for this run
+        per_path_rewards = [np.sum(path["rewards"]) for worker in results for task in worker for path in task[0]]
+        per_path_rewards = np.array(per_path_rewards)
+        eval_average_reward = per_path_rewards.mean()
+        print("Average reward: " + str(eval_average_reward))
 
-    if variant['env_name'].split('-')[-1] == 'dir' and variant['analysis_params']['plot_time_encoding']:
-        import matplotlib.pyplot as plt
-        figsize=None
-        cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        fig, axes_tuple = plt.subplots(nrows=3, ncols=1, sharex='col', gridspec_kw={'height_ratios': [1, 1, 1]}, figsize=figsize)
-        task_base = results[0][0][0][0]['base_task_indicators']
-        task = results[0][0][0][0]['task_indicators']
-        rewards = results[0][0][0][0]['rewards']
-        axes_tuple[0].plot(list(range(len(task_base))), task_base, color=cycle[0], label="base task")
-        #axes_tuple[1].plot(list(range(len(direction_goal))), np.sign(direction_is), color=cycle[1], label="direction")
-        axes_tuple[1].plot(list(range(len(task))), task, color=cycle[1], label="task")
-        axes_tuple[2].plot(list(range(len(rewards))), rewards, color=cycle[2], label="reward")
-        axes_tuple[0].grid()
-        axes_tuple[1].grid()
-        axes_tuple[2].grid()
-        axes_tuple[0].legend(loc='upper right')
-        axes_tuple[1].legend(loc='upper right')
-        axes_tuple[2].legend(loc='upper right')
-        axes_tuple[2].set_xlabel("time $t$")
-        plt.tight_layout()
-        if save:
-            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
-                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
-                        "task_embeddings_over_time.png", dpi=300, bbox_inches='tight')
-        plt.show()
-    # velocity plot
-    if variant['env_name'].split('-')[-1] == 'vel' and variant['analysis_params']['plot_time_response']:
-        import matplotlib.pyplot as plt
-        plt.figure()
-        velocity_is = [a['velocity'] for a in results[0][0][0][0]['env_infos']]
-        filter_constant = time_steps
-        velocity_is_temp = ([0] * filter_constant) + velocity_is
-        velocity_is_filtered = []
-        for i in range(len(velocity_is)):
-            velocity_is_filtered.append(sum(velocity_is_temp[i:i+filter_constant]) / filter_constant)
-        velocity_goal = [a['true_task']['specification'] for a in results[0][0][0][0]['env_infos']]
-        plt.plot(list(range(len(velocity_goal))), velocity_goal, label="goal velocity")
-        plt.plot(list(range(len(velocity_is))), velocity_is, label="velocity")
-        plt.plot(list(range(len(velocity_is_filtered))), velocity_is_filtered, label="velocity filtered")
-        plt.xlabel("time $t$")
-        plt.grid()
-        plt.legend()
-        plt.tight_layout()
-        if save:
-            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
-                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
-                        "velocity_vs_goal_velocity_new.pdf", dpi=300)
-        plt.show()
-    if variant['env_name'].split('-')[-1] == 'dir' and variant['analysis_params']['plot_time_response']:
-        import matplotlib.pyplot as plt
-        figsize=None
-        cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        fig, axes_tuple = plt.subplots(nrows=2, ncols=1, sharex='col', gridspec_kw={'height_ratios': [1, 1]}, figsize=figsize)
-        direction_is = [a['direction'] for a in results[0][0][0][0]['env_infos']]
-        direction_goal = [a['true_task']['specification'] for a in results[0][0][0][0]['env_infos']]
-        axes_tuple[0].plot(list(range(len(direction_is))), direction_is, color=cycle[0], label="velocity")
-        #axes_tuple[1].plot(list(range(len(direction_goal))), np.sign(direction_is), color=cycle[1], label="direction")
-        axes_tuple[1].plot(list(range(len(direction_goal))), direction_goal, color=cycle[1], label="goal direction")
-        axes_tuple[0].grid()
-        #axes_tuple[1].grid()
-        axes_tuple[1].grid()
-        axes_tuple[0].legend(loc='upper right')
-        axes_tuple[1].legend(loc='upper right')
-        #axes_tuple[2].legend(loc='lower left')
-        axes_tuple[1].set_xlabel("time $t$")
-        plt.tight_layout()
-        if save:
-            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
-                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
-                        "velocity_vs_goal_direction_new.pdf", dpi=300, bbox_inches='tight')
-        plt.show()
-
-    if variant['env_name'].split('-')[-1] == 'vel' and variant['analysis_params']['plot_velocity_multi']:
-        import matplotlib.pyplot as plt
-        import matplotlib.pylab as pl
-        plt.figure(figsize=(10,5))
-        colors = pl.cm.coolwarm(np.linspace(0, 1, len(test_tasks)))
-        #colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        for i in range(len(test_tasks)):
-            results = rollout_coordinator.collect_data(test_tasks[i:i + 1], 'test', deterministic=True, max_trajs=1,
-                                                       animated=False, save_frames=False)
-
+        if variant['env_name'].split('-')[-1] == 'dir' and variant['analysis_params']['plot_time_encoding']:
+            import matplotlib.pyplot as plt
+            figsize=None
+            cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            fig, axes_tuple = plt.subplots(nrows=3, ncols=1, sharex='col', gridspec_kw={'height_ratios': [1, 1, 1]}, figsize=figsize)
+            task_base = results[0][0][0][0]['base_task_indicators']
+            task = results[0][0][0][0]['task_indicators']
+            rewards = results[0][0][0][0]['rewards']
+            axes_tuple[0].plot(list(range(len(task_base))), task_base, color=cycle[0], label="base task")
+            #axes_tuple[1].plot(list(range(len(direction_goal))), np.sign(direction_is), color=cycle[1], label="direction")
+            axes_tuple[1].plot(list(range(len(task))), task, color=cycle[1], label="task")
+            axes_tuple[2].plot(list(range(len(rewards))), rewards, color=cycle[2], label="reward")
+            axes_tuple[0].grid()
+            axes_tuple[1].grid()
+            axes_tuple[2].grid()
+            axes_tuple[0].legend(loc='upper right')
+            axes_tuple[1].legend(loc='upper right')
+            axes_tuple[2].legend(loc='upper right')
+            axes_tuple[2].set_xlabel("time $t$")
+            plt.tight_layout()
+            if save:
+                plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                            '_testcase' + '_' + str(example_case) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                            "task_embeddings_over_time.png", dpi=300, bbox_inches='tight')
+            plt.show()
+        # velocity plot
+        if variant['env_name'].split('-')[-1] == 'vel' and variant['analysis_params']['plot_time_response']:
+            import matplotlib.pyplot as plt
+            plt.figure()
             velocity_is = [a['velocity'] for a in results[0][0][0][0]['env_infos']]
+            filter_constant = time_steps
+            velocity_is_temp = ([0] * filter_constant) + velocity_is
+            velocity_is_filtered = []
+            for i in range(len(velocity_is)):
+                velocity_is_filtered.append(sum(velocity_is_temp[i:i+filter_constant]) / filter_constant)
             velocity_goal = [a['true_task']['specification'] for a in results[0][0][0][0]['env_infos']]
-            plt.plot(list(range(len(velocity_goal))), velocity_goal, '--', color=colors[i])
-            plt.plot(list(range(len(velocity_is))), velocity_is, color=colors[i])
+            plt.plot(list(range(len(velocity_goal))), velocity_goal, label="goal velocity")
+            plt.plot(list(range(len(velocity_is))), velocity_is, label="velocity")
+            plt.plot(list(range(len(velocity_is_filtered))), velocity_is_filtered, label="velocity filtered")
+            plt.xlabel("time $t$")
+            plt.grid()
+            plt.legend()
+            plt.tight_layout()
+            if save:
+                plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                            '_testcase' + '_' + str(example_case) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                            "velocity_vs_goal_velocity_new.pdf", dpi=300)
+            plt.show()
+        if variant['env_name'].split('-')[-1] == 'dir' and variant['analysis_params']['plot_time_response']:
+            import matplotlib.pyplot as plt
+            figsize=None
+            cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            fig, axes_tuple = plt.subplots(nrows=2, ncols=1, sharex='col', gridspec_kw={'height_ratios': [1, 1]}, figsize=figsize)
+            direction_is = [a['direction'] for a in results[0][0][0][0]['env_infos']]
+            direction_goal = [a['true_task']['specification'] for a in results[0][0][0][0]['env_infos']]
+            axes_tuple[0].plot(list(range(len(direction_is))), direction_is, color=cycle[0], label="velocity")
+            #axes_tuple[1].plot(list(range(len(direction_goal))), np.sign(direction_is), color=cycle[1], label="direction")
+            axes_tuple[1].plot(list(range(len(direction_goal))), direction_goal, color=cycle[1], label="goal direction")
+            axes_tuple[0].grid()
+            #axes_tuple[1].grid()
+            axes_tuple[1].grid()
+            axes_tuple[0].legend(loc='upper right')
+            axes_tuple[1].legend(loc='upper right')
+            #axes_tuple[2].legend(loc='lower left')
+            axes_tuple[1].set_xlabel("time $t$")
+            plt.tight_layout()
+            if save:
+                plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                            '_testcase' + '_' + str(example_case) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                            "velocity_vs_goal_direction_new.pdf", dpi=300, bbox_inches='tight')
+            plt.show()
 
-        from matplotlib.lines import Line2D
-        custom_lines = [Line2D([0], [0], color='gray', linestyle='--'),
-                        Line2D([0], [0], color='gray')]
+        if variant['env_name'].split('-')[-1] == 'vel' and variant['analysis_params']['plot_velocity_multi']:
+            import matplotlib.pyplot as plt
+            import matplotlib.pylab as pl
+            plt.figure(figsize=(10,5))
+            colors = pl.cm.coolwarm(np.linspace(0, 1, len(test_tasks)))
+            #colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            for i in range(len(test_tasks)):
+                results = rollout_coordinator.collect_data(test_tasks[i:i + 1], 'test', deterministic=True, max_trajs=1,
+                                                           animated=False, save_frames=False)
 
-        fontsize = 14
-        plt.legend(custom_lines, ['goal velocity', 'velocity'], fontsize=fontsize, loc='lower right')
-        plt.xlabel("time step $t$", fontsize=fontsize)
-        plt.ylabel("velocity $v$", fontsize=fontsize)
-        plt.xticks(fontsize=fontsize)
-        plt.yticks(fontsize=fontsize)
-        plt.grid()
-        plt.xlim(0, len(list(range(len(velocity_goal)))))
-        #plt.title("cheetah-stationary-vel: velocity vs. goal velocity", fontsize=14)
-        plt.tight_layout()
-        if save:
-            plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
-                        '_testcase' + '_' + str(variant['analysis_params']['example_case']) + '_' + 'itr-' + str(showcase_itr) + '_' +
-                        "multiple_velocity_vs_goal_velocity" + ".pdf", dpi=300, format="pdf")
-        plt.show()
-    # video taking
-    if variant['analysis_params']['produce_video']:
-        print("Producing video... do NOT kill program until completion!")
-        results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test', deterministic=True, max_trajs=1, animated=False, save_frames=True)
-        if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
-            print('Success')
-        else:
-            print('Failure \nAborting')
-            return
-        path_video = results[0][0][0][0]
-        video_frames = []
-        video_frames += [t['frame'] for t in path_video['env_infos']]
-        print("Saving video...")
-        # save frames to file temporarily
-        temp_dir = os.path.join(path_to_folder, 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        for i, frm in enumerate(video_frames):
-            frm.save(os.path.join(temp_dir, '%06d.jpg' % i))
-        video_filename = os.path.join(save_dir,
-                                      variant['save_prefix'] + variant['env_name'] + '_testcase' + '_' + str(variant['analysis_params']['example_case']) +
-                                      '_' + 'itr-' + str(showcase_itr) + '_video.mp4')
-        # run ffmpeg to make the video
-        os.system('ffmpeg -r 25 -i {}/%06d.jpg -vb 20M -vcodec mpeg4 {}'.format(temp_dir, video_filename))
-        # delete the frames
-        shutil.rmtree(temp_dir)
+                velocity_is = [a['velocity'] for a in results[0][0][0][0]['env_infos']]
+                velocity_goal = [a['true_task']['specification'] for a in results[0][0][0][0]['env_infos']]
+                plt.plot(list(range(len(velocity_goal))), velocity_goal, '--', color=colors[i])
+                plt.plot(list(range(len(velocity_is))), velocity_is, color=colors[i])
+
+            from matplotlib.lines import Line2D
+            custom_lines = [Line2D([0], [0], color='gray', linestyle='--'),
+                            Line2D([0], [0], color='gray')]
+
+            fontsize = 14
+            plt.legend(custom_lines, ['goal velocity', 'velocity'], fontsize=fontsize, loc='lower right')
+            plt.xlabel("time step $t$", fontsize=fontsize)
+            plt.ylabel("velocity $v$", fontsize=fontsize)
+            plt.xticks(fontsize=fontsize)
+            plt.yticks(fontsize=fontsize)
+            plt.grid()
+            plt.xlim(0, len(list(range(len(velocity_goal)))))
+            #plt.title("cheetah-stationary-vel: velocity vs. goal velocity", fontsize=14)
+            plt.tight_layout()
+            if save:
+                plt.savefig(save_dir + '/' + variant['save_prefix'] + variant['env_name'] +
+                            '_testcase' + '_' + str(example_case) + '_' + 'itr-' + str(showcase_itr) + '_' +
+                            "multiple_velocity_vs_goal_velocity" + ".pdf", dpi=300, format="pdf")
+            plt.show()
+        # video taking
+        if variant['analysis_params']['produce_video']:
+            print("Producing video... do NOT kill program until completion!")
+            results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test', deterministic=True, max_trajs=1, animated=False, save_frames=True)
+            if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
+                print('Success')
+            else:
+                print('Failure')
+            path_video = results[0][0][0][0]
+            video_frames = []
+            video_frames += [t['frame'] for t in path_video['env_infos']]
+            print("Saving video...")
+            # save frames to file temporarily
+            temp_dir = os.path.join(path_to_folder, 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            for i, frm in enumerate(video_frames):
+                frm.save(os.path.join(temp_dir, '%06d.jpg' % i))
+            video_filename = os.path.join(save_dir,
+                                          variant['save_prefix'] + variant['env_name'] + '_testcase' + '_' + str(example_case) +
+                                          '_' + 'itr-' + str(showcase_itr) + '_video.mp4')
+            # run ffmpeg to make the video
+            os.system('ffmpeg -r 25 -i {}/%06d.jpg -vb 20M -vcodec mpeg4 {}'.format(temp_dir, video_filename))
+            # delete the frames
+            shutil.rmtree(temp_dir)
+    for train_example_case in variant['analysis_params']['train_example_cases']:
+        if variant['analysis_params']['produce_video']:
+            print("Producing video... do NOT kill program until completion!")
+            results = rollout_coordinator.collect_data(train_tasks[train_example_case:train_example_case + 1], 'test', deterministic=True, max_trajs=1, animated=False, save_frames=True)
+            if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
+                print('Success')
+            else:
+                print('Failure')
+            path_video = results[0][0][0][0]
+            video_frames = []
+            video_frames += [t['frame'] for t in path_video['env_infos']]
+            print("Saving video...")
+            # save frames to file temporarily
+            temp_dir = os.path.join(path_to_folder, 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            for i, frm in enumerate(video_frames):
+                frm.save(os.path.join(temp_dir, '%06d.jpg' % i))
+            video_filename = os.path.join(save_dir,
+                                          variant['save_prefix'] + variant['env_name'] + '_traincase' + '_' + str(train_example_case) +
+                                          '_' + 'itr-' + str(showcase_itr) + '_video.mp4')
+            # run ffmpeg to make the video
+            os.system('ffmpeg -r 25 -i {}/%06d.jpg -vb 20M -vcodec mpeg4 {}'.format(temp_dir, video_filename))
+            # delete the frames
+            shutil.rmtree(temp_dir)
 
 
 def deep_update_dict(fr, to):
@@ -476,6 +514,8 @@ def deep_update_dict(fr, to):
     # assume dicts have same keys
     for k, v in fr.items():
         if type(v) is dict:
+            if k not in to.keys():
+                to[k] = dict()
             deep_update_dict(v, to[k])
         else:
             to[k] = v
@@ -491,7 +531,7 @@ def deep_update_dict(fr, to):
 @click.option('--debug', is_flag=True, default=False)
 def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
 
-    variant = analysis_config
+    variant = deep_update_dict(analysis_config, default_config)
 
     if weights is not None:
         variant['path_to_weights'] = weights

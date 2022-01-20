@@ -1,12 +1,12 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='/home/philipp/Dokumente/Uni/Masterarbeit/Code/cemrl-edited/output/metaworld-ml1-reach/2021_12_18_01_30_06',  # CONFIGURE! path to experiment folder
-    save_dir='/home/philipp/Dokumente/Uni/Masterarbeit/Code/cemrl-edited/output_analysis/metaworld-ml1-reach/',
+    path_to_weights='./output/metaworld-ml1-reach-observable/2021_12_23_12_53_08',  # CONFIGURE! path to experiment folder
+    save_dir='./output_analysis/metaworld-ml1-reach-observable/2021_12_23_12_53_08',
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
     train_or_showcase='showcase',  # 'showcase' to load trained policy and showcase
-    showcase_itr=400,  # CONFIGURE! epoch for which analysis is performed
+    showcase_itr=100,  # CONFIGURE! epoch for which analysis is performed
     util_params=dict(
-        base_log_dir='output_analysis',  # name of output directory
+        base_log_dir='.temp',  # name of output directory
         use_gpu=True,  # set True if GPU available and should be used
         use_multiprocessing=False,  # set True if data collection should be parallelized across CPUs
         num_workers=8,  # number of CPU workers for data collection
@@ -15,7 +15,8 @@ analysis_config = dict(
         plot=False  # plot figures of progress for reconstruction and policy training
     ),
     analysis_params=dict(
-        example_case=8,  # CONFIGURE! choose a test task
+        train_example_cases=[0, 10, 20, 30, 40],
+        example_cases=[0, 10, 20, 30, 40],  # CONFIGURE! choose an array of test tasks
         log_and_plot_progress=False,  # CONFIGURE! If True: experiment will be logged to the experiment_database.json and plotted, If already logged: plot only
         save=True,  # CONFIGURE! If True: plots of following options will be saved to the experiment folder
         visualize_run=False,  # CONFIGURE! If True: learned policy of the showcase_itr will be played on example_case

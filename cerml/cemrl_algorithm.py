@@ -146,9 +146,9 @@ class CEMRLAlgorithm:
             eval_output = self.rollout_coordinator.evaluate('train', data_collection_tasks, self.num_eval_trajectories, deterministic=True, animated=False, log=True)
             average_test_reward, std_test_reward, max_test_reward, min_test_reward, eval_stats = eval_output
             tabular_statistics.update(eval_stats)
-            eval_output = self.rollout_coordinator.evaluate('test', self.test_tasks, self.num_eval_trajectories, deterministic=False, animated=False, log=True)
-            average_test_reward, std_test_reward, max_test_reward, min_test_reward, eval_stats = eval_output
-            tabular_statistics.update(eval_stats)
+            # eval_output = self.rollout_coordinator.evaluate('test', self.test_tasks, self.num_eval_trajectories, deterministic=False, animated=False, log=True)
+            # average_test_reward, std_test_reward, max_test_reward, min_test_reward, eval_stats = eval_output
+            # tabular_statistics.update(eval_stats)
             eval_output = self.rollout_coordinator.evaluate('test', self.test_tasks, self.num_eval_trajectories, deterministic=True, animated=False, log=True)
             average_test_reward, std_test_reward, max_test_reward, min_test_reward, eval_stats = eval_output
             tabular_statistics.update(eval_stats)
