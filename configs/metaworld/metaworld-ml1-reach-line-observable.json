@@ -1,19 +1,20 @@
 {
-    "env_name": "metaworld-ml1-reach-plane",
+    "env_name": "metaworld-ml1-reach-line-observable",
     "env_params": {
         "n_train_tasks": 50,
         "n_eval_tasks": 50,
         "use_normalized_env": false,
         "ml10or45": "reach-special",
-        "base_task": "reach-v2-plane",
-        "state_reconstruction_clip": 12
+        "base_task": "reach-v2-line",
+        "state_reconstruction_clip": 12,
+        "partially_observable": false
     },
     "algo_params": {
         "use_relabeler": true,
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
-        "encoding_mode": "transitionSharedY",
+        "encoding_mode": "noEncoding",
         "use_fixed_seeding": true,
         "batch_size_reconstruction": 256,
         "batch_size_combination": 256,

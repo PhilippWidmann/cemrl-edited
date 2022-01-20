@@ -7,7 +7,7 @@ import numpy as np
 
 
 class ML1Reach(metaworld.Benchmark):
-    def __init__(self, env_name, seed=None):
+    def __init__(self, env_name, seed=None, partially_observable=True):
         super().__init__()
         if not env_name in REACH_ENV_DICT.keys():
             raise ValueError(f"{env_name} is not a valid special-reach-environment")
@@ -19,11 +19,11 @@ class ML1Reach(metaworld.Benchmark):
 
         self._train_tasks = metaworld._make_tasks(self._train_classes,
                                         {env_name: args_kwargs},
-                                        dict(partially_observable=True),
+                                        dict(partially_observable=partially_observable),
                                         seed=seed)
         self._test_tasks = metaworld._make_tasks(
             self._test_classes, {env_name: args_kwargs},
-            dict(partially_observable=True),
+            dict(partially_observable=partially_observable),
             seed=(seed + 1 if seed is not None else seed))
 
 

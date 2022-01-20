@@ -64,7 +64,9 @@ class MetaWorldEnv(MetaEnvironment):
             num_train_tasks_per_base_task = int(kwargs['n_train_tasks'])
             num_test_tasks_per_base_task = int(kwargs['n_eval_tasks'])
         elif ml10or45 == 'reach-special':
-            self.ml_env = ML1Reach(kwargs['base_task'])
+            if 'partially_observable' not in kwargs.keys():
+                kwargs['partially_observable'] = True
+            self.ml_env = ML1Reach(kwargs['base_task'], partially_observable=kwargs['partially_observable'])
             num_train_tasks_per_base_task = int(kwargs['n_train_tasks'])
             num_test_tasks_per_base_task = int(kwargs['n_eval_tasks'])
         else:

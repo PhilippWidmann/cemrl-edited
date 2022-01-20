@@ -41,8 +41,8 @@
         "max_path_length": 150,
         "target_entropy_factor": 1.0,
         "sac_alpha": 1.0,
-        "lr_policy": 1e-4,
-        "lr_qf": 1e-4
+        "lr_policy": 3e-4,
+        "lr_qf": 3e-4
     },
     "reconstruction_params": {
         "use_state_diff": false,
