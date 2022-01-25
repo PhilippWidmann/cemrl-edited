@@ -61,7 +61,8 @@ def mutual_information_mixed(x, classes, normalization=False, n_neighbors=5):
         n_classes[i] = np.sum(classes == c)
         nn_class = BallTree(x[classes == c], metric='chebyshev')
         # BallTree considers a point its own closest neighbor, so use n_neighbors+1
-        d_temp, _ = nn_class.query(x[classes == c], k=n_neighbors + 1, return_distance=True)
+        n = min(n_neighbors + 1, int(n_classes[i]))
+        d_temp, _ = nn_class.query(x[classes == c], k=n, return_distance=True)
         d[classes == c] = d_temp[:, -1]
 
     # BallTree counts a point as its own neighbor. Thus subtract 1.
