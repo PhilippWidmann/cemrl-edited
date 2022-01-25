@@ -81,6 +81,63 @@ class SawyerReachEnvV2LineRestricted(SawyerReachEnvV2Line):
         return super().step(full_action)
 
 
+# Environment where the goal only lies on a halfline to the right from the initial position
+class SawyerReachEnvV2Halfline(SawyerReachEnvV2AlternateGoal):
+    def __init__(self):
+        goal_low = (0.15, 0.6, 0.15)
+        goal_high = (0.5, 0.6, 0.15)
+        super(SawyerReachEnvV2Halfline, self).__init__(goal_low, goal_high)
+
+
+# Environment where the goal only lies on a halfline to the right from the initial position
+# Additionally, the action space is restricted to only moving left/right
+class SawyerReachEnvV2HalflineRestricted(SawyerReachEnvV2Halfline):
+    def __init__(self):
+        super(SawyerReachEnvV2HalflineRestricted, self).__init__()
+        self.action_space = Box(
+            np.array([-1]),
+            np.array([+1]),
+        )
+
+    # Only left-right movement -> Pad other action dimensions with 0
+    def step(self, action):
+        if len(action) != 1:
+            raise RuntimeError('Wrong action dimensionality')
+        full_action = np.array([action[0], 0, 0, 0])
+        return super().step(full_action)
+
+
+# Environment where the goal only lies on a halfline to the right from the initial position
+class SawyerReachEnvV2HalflineDistReward(SawyerReachEnvV2AlternateGoal):
+    def __init__(self):
+        goal_low = (0.15, 0.6, 0.15)
+        goal_high = (0.5, 0.6, 0.15)
+        super(SawyerReachEnvV2HalflineDistReward, self).__init__(goal_low, goal_high)
+
+    # Overwrite the complicated reward function and use negative distance instead
+    def compute_reward(self, actions, obs):
+        _, dist, in_place = super(SawyerReachEnvV2HalflineDistReward, self).compute_reward(actions, obs)
+        return -dist, dist, in_place
+
+
+# Environment where the goal only lies on a halfline to the right from the initial position
+# Additionally, the action space is restricted to only moving left/right
+class SawyerReachEnvV2HalflineRestrictedDistReward(SawyerReachEnvV2HalflineDistReward):
+    def __init__(self):
+        super(SawyerReachEnvV2HalflineRestrictedDistReward, self).__init__()
+        self.action_space = Box(
+            np.array([-1]),
+            np.array([+1]),
+        )
+
+    # Only left-right movement -> Pad other action dimensions with 0
+    def step(self, action):
+        if len(action) != 1:
+            raise RuntimeError('Wrong action dimensionality')
+        full_action = np.array([action[0], 0, 0, 0])
+        return super().step(full_action)
+
+
 # Environment where the goal only lies on a horizontal plane around the initial point
 class SawyerReachEnvV2Plane(SawyerReachEnvV2AlternateGoal):
     def __init__(self):
@@ -112,4 +169,8 @@ REACH_ENV_DICT = {
     "reach-v2-line-action-restricted": SawyerReachEnvV2LineRestricted,
     "reach-v2-plane": SawyerReachEnvV2Plane,
     "reach-v2-plane-action-restricted": SawyerReachEnvV2PlaneRestricted,
+    "reach-v2-halfline": SawyerReachEnvV2Halfline,
+    "reach-v2-halfline-action-restricted": SawyerReachEnvV2HalflineRestricted,
+    "reach-v2-halfline-distReward": SawyerReachEnvV2HalflineDistReward,
+    "reach-v2-halfline-action-restricted-distReward": SawyerReachEnvV2HalflineRestrictedDistReward,
 }
