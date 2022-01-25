@@ -236,18 +236,6 @@ class EncodingDebugger:
         logger.record_tabular("MI(r, true_task_base)", np.median(mi_r_base))
         logger.record_tabular("MI(r, true_task_spec)", np.median(mi_r_spec))
 
-        if repetitions > 1:
-            logger.record_tabular("ALL_MI(z, true_task_base)", np.sort(mi_z_base))
-            logger.record_tabular("ALL_MI(z, true_task_spec)", np.sort(mi_z_spec))
-            logger.record_tabular("ALL_MI(z, reward)", np.sort(mi_z_r))
-
-            logger.record_tabular("ALL_MI(y, true_task_base)", np.sort(mi_y_base))
-            logger.record_tabular("ALL_MI(y, true_task_spec)", np.sort(mi_y_spec))
-            logger.record_tabular("ALL_MI(y, reward)", np.sort(mi_y_r))
-
-            logger.record_tabular("ALL_MI(r, true_task_base)", np.sort(mi_r_base))
-            logger.record_tabular("ALL_MI(r, true_task_spec)", np.sort(mi_r_spec))
-
     def validate_z_dependency(self):
         all_ind, ind_temp = self.replay_buffer.get_train_val_indices(self.train_val_percent)
         all_ind = np.concatenate((all_ind, ind_temp))

@@ -9,7 +9,7 @@ default_config = dict(
         n_eval_tasks=30,  # number evaluation tasks tasks
         use_normalized_env=True,  # if normalized env should be used
         scripted_policy=False,  # if true, a scripted oracle policy will be used for data collection, only supported for metaworld
-        use_state_decoder=False,
+        use_state_decoder=True,
     ),
     path_to_weights=None, # path to pre-trained weights to load into networks
     train_or_showcase='train',  # 'train' for train new policy, 'showcase' to load trained policy and showcase
