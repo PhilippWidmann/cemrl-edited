@@ -18,6 +18,13 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         self.test_tasks = self.sample_tasks(kwargs['n_eval_tasks'])
         self.tasks = self.train_tasks + self.test_tasks
 
+    def _compute_reward(self, action, xposafter):
+        vector_to_target = self.active_task - xposafter
+        reward_run = -1.0 * abs(vector_to_target)
+        reward_ctrl = -0.5 * 1e-1 * np.sum(np.square(action))
+        reward = reward_ctrl + reward_run
+        return reward, reward_ctrl, reward_run
+
     def step(self, action):
         self.check_env_change()
 
@@ -27,9 +34,7 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         ob = self._get_obs()
 
         vector_to_target = self.active_task - xposafter
-        reward_run = -1.0 * abs(vector_to_target)
-        reward_ctrl = -0.5 * 1e-1 * np.sum(np.square(action))
-        reward = reward_run + reward_ctrl
+        reward, reward_ctrl, reward_run = self._compute_reward(action, xposafter)
         # compared to gym original, we have the possibility to terminate, if the cheetah lies on the back
         if self.termination_possible:
             state = self.state_vector()
@@ -68,3 +73,12 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         self.recolor()
         self.steps = 0
         self.reset()
+
+
+class HalfCheetahNonStationaryTargetNormalizedRewardEnv(HalfCheetahNonStationaryTargetEnv):
+    def _compute_reward(self, action, xposafter):
+        vector_to_target = self.active_task - xposafter
+        reward_run = -1.0 * abs(vector_to_target)
+        reward_ctrl = -0.5 * 1e-1 * np.sum(np.square(action))
+        reward = reward_ctrl + reward_run / np.abs(self.active_task)
+        return reward, reward_ctrl, reward_run

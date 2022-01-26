@@ -161,8 +161,8 @@ class NonStationaryGoalDirectionEnv(NonStationaryMetaEnv):
 
 class NonStationaryGoalTargetEnv(NonStationaryMetaEnv):
     def __init__(self, *args, **kwargs):
-        self.task_min_target = kwargs.get('task_min_target', 10.0)
-        self.task_max_target = kwargs.get('task_max_target', 50.0)
+        self.task_min_target = kwargs.get('task_min_target', 5.0)
+        self.task_max_target = kwargs.get('task_max_target', 25.0)
         NonStationaryMetaEnv.__init__(self, *args, **kwargs)
         self.active_task = 10.0
 

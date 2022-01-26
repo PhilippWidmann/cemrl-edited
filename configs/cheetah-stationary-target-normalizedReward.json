@@ -1,5 +1,5 @@
 {
-    "env_name": "cheetah-stationary-target",
+    "env_name": "cheetah-stationary-target-normalizedReward",
     "env_params": {
         "n_train_tasks": 100,
         "n_eval_tasks": 30,
