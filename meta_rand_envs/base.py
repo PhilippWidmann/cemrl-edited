@@ -159,6 +159,37 @@ class NonStationaryGoalDirectionEnv(NonStationaryMetaEnv):
         return tasks
 
 
+class NonStationaryGoalTargetEnv(NonStationaryMetaEnv):
+    def __init__(self, *args, **kwargs):
+        self.task_min_target = kwargs.get('task_min_target', 10.0)
+        self.task_max_target = kwargs.get('task_max_target', 50.0)
+        NonStationaryMetaEnv.__init__(self, *args, **kwargs)
+        self.active_task = 10.0
+
+    def change_active_task(self, *args, **kwargs):
+        if self.meta_mode == 'train':
+            self.active_task = np.random.choice(self.train_tasks)['target']
+        elif self.meta_mode == 'test':
+            self.active_task = np.random.choice(self.test_tasks)['target']
+        self.recolor()
+
+    def recolor(self):
+        geom_rgba = self._init_geom_rgba.copy()
+        hue = (1.0 / 3.0) - (
+                    self.active_task / self.task_max_target / 3.0)  # maps between red (max) and green (min) in hsv color space
+        rgb_value_tuple = colorsys.hsv_to_rgb(hue, 1, 1)
+        geom_rgba[1:, :3] = np.asarray(rgb_value_tuple)
+        self.model.geom_rgba[:] = geom_rgba
+
+    def sample_tasks(self, num_tasks):
+        np.random.seed(1337)
+        targets = np.random.uniform(self.task_min_target, self.task_max_target, size=(num_tasks,))
+        # for tests
+        #targets = np.linspace(self.task_min_target, self.task_max_target, num_tasks)
+        tasks = [{'target': target} for target in targets]
+        return tasks
+
+
 class RandomParamEnv(NonStationaryMetaEnv, MujocoEnv):
     def __init__(self, *args, **kwargs):
         NonStationaryMetaEnv.__init__(self, *args, **kwargs)
