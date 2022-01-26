@@ -1,12 +1,10 @@
 # Continuous Environment Meta Reinforcement Learning (CEMRL)
 
-import os, shutil
-import pathlib
+import os
 import numpy as np
 import click
 import json
 import torch
-import torch.nn as nn
 import gym
 
 from cerml.debug_encoding import EncodingDebugger
@@ -31,14 +29,12 @@ from cerml.relabeler import Relabeler
 from cerml.cemrl_algorithm import CEMRLAlgorithm
 from meta_rand_envs.wrappers import ENVS
 
-import pickle
 
-
-def experiment(variant):
+def setup_environment(variant):
     # optional GPU mode
     ptu.set_gpu_mode(variant['util_params']['use_gpu'], variant['util_params']['gpu_id'])
     torch.set_num_threads(1)
-    if(variant['algo_params']['use_fixed_seeding']):
+    if variant['algo_params']['use_fixed_seeding']:
         torch.manual_seed(variant['algo_params']['seed'])
         np.random.seed(variant['algo_params']['seed'])
 
@@ -50,17 +46,31 @@ def experiment(variant):
                                       snapshot_gap=variant['algo_params']['snapshot_gap'],
                                       snapshot_points=encoding_save_epochs)
 
+    # create temp folder
+    if not os.path.exists(variant['reconstruction_params']['temp_folder']):
+        os.makedirs(variant['reconstruction_params']['temp_folder'])
+
+    # debugging triggers a lot of printing and logs to a debug directory
+    DEBUG = variant['util_params']['debug']
+    PLOT = variant['util_params']['plot']
+    os.environ['DEBUG'] = str(int(DEBUG))
+    os.environ['PLOT'] = str(int(PLOT))
+
     # create multi-task environment and sample tasks
     env = ENVS[variant['env_name']](**variant['env_params'])
     if variant['env_params']['use_normalized_env']:
         env = NormalizedBoxEnv(env)
     if variant['train_or_showcase'] == 'showcase':
         env = CameraWrapper(env)
+
+    return env, experiment_log_dir
+
+
+def initialize_networks(variant, env, experiment_log_dir):
     obs_dim = int(np.prod(env.observation_space.shape))
     action_dim = int(np.prod(env.action_space.shape))
     reward_dim = 1
     tasks = list(range(len(env.tasks)))
-    #train_tasks = tasks[:variant['env_params']['n_train_tasks']]
     train_tasks = list(range(len(env.train_tasks)))
     test_tasks = tasks[-variant['env_params']['n_eval_tasks']:]
 
@@ -138,13 +148,6 @@ def experiment(variant):
         **policy_networks.get_networks()
     }
 
-    # optionally load pre-trained weights
-    if variant['path_to_weights'] is not None:
-        itr = variant['showcase_itr']
-        path = variant['path_to_weights']
-        for name, net in networks.items():
-            net.load_state_dict(torch.load(os.path.join(path, name + '_itr_' + str(itr) + '.pth'), map_location='cpu'))
-
     replay_buffer = StackedReplayBuffer(
         variant['algo_params']['max_replay_buffer_size'],
         time_steps,
@@ -156,7 +159,7 @@ def experiment(variant):
         variant['algo_params']['sampling_mode']
     )
 
-    #Agent
+    # Agent
     agent_class = ScriptedPolicyAgent if variant['env_params']['scripted_policy'] else CEMRLAgent
     agent = agent_class(
         encoder,
@@ -182,7 +185,7 @@ def experiment(variant):
         variant['util_params']['num_workers'],
         variant['util_params']['gpu_id'],
         variant['env_params']['scripted_policy']
-        )
+    )
 
     # ReconstructionTrainer
     reconstruction_trainer = ReconstructionTrainer(
@@ -215,7 +218,6 @@ def experiment(variant):
     if variant['algo_params']['encoding_mode'] == 'noEncoding':
         # debug case: completely omit any encoding and only do SAC training
         reconstruction_trainer = NoOpReconstructionTrainer()
-
 
     # PolicyTrainer
     policy_trainer = PolicyTrainer(
@@ -290,7 +292,6 @@ def experiment(variant):
     )
     """
 
-
     relabeler = Relabeler(
         encoder,
         replay_buffer,
@@ -299,7 +300,6 @@ def experiment(variant):
         obs_dim,
         variant['algo_params']['use_data_normalization'],
     )
-
 
     algorithm = CEMRLAlgorithm(
         replay_buffer,
@@ -330,20 +330,27 @@ def experiment(variant):
         experiment_log_dir,
         latent_dim,
         encoding_debugger,
-        )
+    )
+
+    return algorithm, networks, rollout_coordinator, replay_buffer, train_tasks, test_tasks
+
+
+def load_networks(variant, networks):
+    itr = variant['showcase_itr']
+    path = variant['path_to_weights']
+    for name, net in networks.items():
+        net.load_state_dict(torch.load(os.path.join(path, name + '_itr_' + str(itr) + '.pth'), map_location='cpu'))
+
+
+def experiment(variant):
+    env, experiment_log_dir = setup_environment(variant)
+    algorithm, networks, *_ = initialize_networks(variant, env, experiment_log_dir)
+
+    if variant['path_to_weights'] is not None:
+        load_networks(variant, networks)
 
     if ptu.gpu_enabled():
         algorithm.to()
-
-    # debugging triggers a lot of printing and logs to a debug directory
-    DEBUG = variant['util_params']['debug']
-    PLOT = variant['util_params']['plot']
-    os.environ['DEBUG'] = str(int(DEBUG))
-    os.environ['PLOT'] = str(int(PLOT))
-
-    # create temp folder
-    if not os.path.exists(variant['reconstruction_params']['temp_folder']):
-        os.makedirs(variant['reconstruction_params']['temp_folder'])
 
     # run the algorithm
     algorithm.train()
@@ -358,6 +365,7 @@ def deep_update_dict(fr, to):
         else:
             to[k] = v
     return to
+
 
 @click.command()
 @click.argument('config', default="configs/debug-cheetah.json")
@@ -390,6 +398,7 @@ def main(config, weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
         variant['showcase_itr'] = weights_itr
 
     experiment(variant)
+
 
 if __name__ == "__main__":
     main()
