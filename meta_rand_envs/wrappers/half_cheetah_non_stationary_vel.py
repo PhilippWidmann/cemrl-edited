@@ -1,5 +1,5 @@
 from meta_rand_envs.half_cheetah_non_stationary_velocity import HalfCheetahNonStationaryVelocityEnv, \
-    HalfCheetahNonStationaryVelocityEnvObservable
+    ObservableGoalVelHalfCheetahNonStationaryVelocityEnv, ObservableRewardHalfCheetahNonStationaryVelocityEnv
 from . import register_env
 
 @register_env('cheetah-stationary-vel')
@@ -11,7 +11,13 @@ class HalfCheetahNonStationaryVelWrappedEnv(HalfCheetahNonStationaryVelocityEnv)
 
 @register_env('cheetah-stationary-vel-observable')
 @register_env('cheetah-non-stationary-vel-observable')
-class HalfCheetahNonStationaryVelWrappedEnvObservable(HalfCheetahNonStationaryVelocityEnvObservable):
+class ObservableGoalVelHalfCheetahNonStationaryVelWrappedEnv(ObservableGoalVelHalfCheetahNonStationaryVelocityEnv):
     def __init__(self, *args, **kwargs):
-        HalfCheetahNonStationaryVelocityEnvObservable.__init__(self, *args, **kwargs)
+        ObservableGoalVelHalfCheetahNonStationaryVelocityEnv.__init__(self, *args, **kwargs)
+
+
+@register_env('cheetah-stationary-vel-observable-reward')
+class ObservableRewardHalfCheetahNonStationaryVelWrappedEnvObservable(ObservableRewardHalfCheetahNonStationaryVelocityEnv):
+    def __init__(self, *args, **kwargs):
+        ObservableRewardHalfCheetahNonStationaryVelocityEnv.__init__(self, *args, **kwargs)
 
