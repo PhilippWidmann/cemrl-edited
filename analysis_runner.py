@@ -1,10 +1,13 @@
 # Continuous Embedding Meta Reinforcement Learning (CEMRL)
 
 import os, shutil
+
+import matplotlib.pyplot as plt
 import numpy as np
 import click
 import json
 
+from analysis.plot_episode import plot_per_episode, get_plot_specification
 from configs.default import default_config
 import rlkit.torch.pytorch_util as ptu
 from configs.analysis_config import analysis_config
@@ -51,6 +54,46 @@ def analysis(variant):
     if variant['analysis_params']['plot_encoding']:
         plot_encodings_split(showcase_itr, path_to_folder, save=save, save_dir=variant['save_dir'], save_prefix=variant['save_prefix'])
 
+    results_dict = {}
+    for example_case in example_cases:
+        results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
+                deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False)
+        results_dict[example_case] = results[0][0][0][0]
+
+    for plot_spec in variant['analysis_params']['single_episode_plots']:
+        plot_spec_dict = get_plot_specification(plot_spec)
+        for example_case in example_cases:
+            fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
+            for i, ax in enumerate(axes.flat):
+                p = plot_spec_dict[i]
+                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
+
+            if save:
+                save_name = variant['save_prefix'] + \
+                            'itr-' + str(showcase_itr) + '_' + \
+                            'testcase-' + str(example_case) + '_' + \
+                            str(plot_spec) + '.png'
+                fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
+            else:
+                fig.show()
+
+    for plot_spec in variant['analysis_params']['multiple_episode_plots']:
+        plot_spec_dict = get_plot_specification(plot_spec)
+        fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
+        for example_case in example_cases:
+            for i, ax in enumerate(axes.flat):
+                p = plot_spec_dict[i]
+                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
+        if save:
+            save_name = variant['save_prefix'] + \
+                        'itr-' + str(showcase_itr) + '_' + \
+                        'testcase-' + str(example_cases) + '_' + \
+                        str(plot_spec) + '.png'
+            fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
+        else:
+            fig.show()
+
+    """
     # visualize test cases
     for example_case in example_cases:
         results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
@@ -62,7 +105,7 @@ def analysis(variant):
         eval_average_reward = per_path_rewards.mean()
         print("Average reward: " + str(eval_average_reward))
 
-        if variant['env_name'].split('-')[-1] == 'dir' and variant['analysis_params']['plot_time_encoding']:
+        if variant['analysis_params']['plot_time_encoding']:
             import matplotlib.pyplot as plt
             figsize=None
             cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -172,10 +215,10 @@ def analysis(variant):
         if variant['analysis_params']['produce_video']:
             print("Producing video... do NOT kill program until completion!")
             results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test', deterministic=True, max_trajs=1, animated=False, save_frames=True)
-            if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
-                print('Success')
-            else:
-                print('Failure')
+            #if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
+            #    print('Success')
+            #else:
+            #    print('Failure')
             path_video = results[0][0][0][0]
             video_frames = []
             video_frames += [t['frame'] for t in path_video['env_infos']]
@@ -196,10 +239,10 @@ def analysis(variant):
         if variant['analysis_params']['produce_video']:
             print("Producing video... do NOT kill program until completion!")
             results = rollout_coordinator.collect_data(train_tasks[train_example_case:train_example_case + 1], 'test', deterministic=True, max_trajs=1, animated=False, save_frames=True)
-            if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
-                print('Success')
-            else:
-                print('Failure')
+            #if max([f['success'] for f in results[0][0][0][0]['env_infos']]) > 0.5:
+            #    print('Success')
+            #else:
+            #    print('Failure')
             path_video = results[0][0][0][0]
             video_frames = []
             video_frames += [t['frame'] for t in path_video['env_infos']]
@@ -216,6 +259,7 @@ def analysis(variant):
             os.system('ffmpeg -r 25 -i {}/%06d.jpg -vb 20M -vcodec mpeg4 {}'.format(temp_dir, video_filename))
             # delete the frames
             shutil.rmtree(temp_dir)
+        """
 
 
 def deep_update_dict(fr, to):
