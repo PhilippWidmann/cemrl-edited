@@ -39,6 +39,7 @@ class ReconstructionTrainer(nn.Module):
                  prior_sigma,
                  isIndividualY,
                  data_usage_reconstruction,
+                 reconstruct_all_steps,
                  optimizer_class=optim.Adam,
                  ):
         super(ReconstructionTrainer, self).__init__()
@@ -67,6 +68,7 @@ class ReconstructionTrainer(nn.Module):
         self.prior_sigma = prior_sigma
         self.isIndividualY = isIndividualY
         self.data_usage_reconstruction = data_usage_reconstruction
+        self.reconstruct_all_steps = reconstruct_all_steps
 
         self.factor_state_loss = 1
         self.factor_reward_loss = self.state_reconstruction_clip
@@ -208,16 +210,24 @@ class ReconstructionTrainer(nn.Module):
         # prepare for usage in encoder
         encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
         # prepare for usage in decoder
-        decoder_action = ptu.from_numpy(data['actions'])[:, -1, :]
-        decoder_state = ptu.from_numpy(data['observations'])[:, -1, :]
-        decoder_next_state = ptu.from_numpy(data['next_observations'])[:, -1, :]
-        decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
-        true_task = data['true_tasks'][:, -1, :]
+        decoder_action = ptu.from_numpy(data['actions'])
+        decoder_state = ptu.from_numpy(data['observations'])
+        decoder_next_state = ptu.from_numpy(data['next_observations'])
+        decoder_reward = ptu.from_numpy(data['rewards'])
+        true_task = data['true_tasks']
+
+        if not self.reconstruct_all_steps:
+            # Reconstruct only the current timestep
+            decoder_action = decoder_action[:, -1, :]
+            decoder_state = decoder_state[:, -1, :]
+            decoder_next_state = decoder_next_state[:, -1, :]
+            decoder_reward = decoder_reward[:, -1, :]
+            true_task = true_task[:, -1, :]
 
         if self.use_state_diff:
-            decoder_state_target = (decoder_next_state - decoder_state)[:, :self.state_reconstruction_clip]
+            decoder_state_target = (decoder_next_state - decoder_state)[..., :self.state_reconstruction_clip]
         else:
-            decoder_state_target = decoder_next_state[:, :self.state_reconstruction_clip]
+            decoder_state_target = decoder_next_state[..., :self.state_reconstruction_clip]
 
         # Forward pass through encoder
         y_distribution, z_distributions = self.encoder.encode(encoder_input)
@@ -231,14 +241,20 @@ class ReconstructionTrainer(nn.Module):
             # every y component (see ELBO formula)
             for y in range(self.num_classes):
                 z, _ = self.encoder.sample_z(y_distribution, z_distributions, y_usage="specific", y=y)
+                if self.reconstruct_all_steps:
+                    z = z.unsqueeze(1).repeat(1, self.timesteps + 1, 1)
 
                 # put in decoder to get likelihood
                 state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-                reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
+                reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=-1)
+                if self.reconstruct_all_steps:
+                    reward_loss = torch.mean(reward_loss, dim=1)
                 reward_losses[:, :, y] = reward_loss.unsqueeze(1).repeat(1, self.timesteps)
 
                 if self.use_state_decoder:
-                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
+                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=-1)
+                    if self.reconstruct_all_steps:
+                        state_loss = torch.mean(state_loss, dim=1)
                     state_losses[:, :, y] = state_loss.unsqueeze(1).repeat(1, self.timesteps)
                     nll_px[:, :, y] = self.loss_weight_state * state_losses[:, :, y] + self.loss_weight_reward * reward_losses[:, :, y]
                 else:
@@ -295,14 +311,20 @@ class ReconstructionTrainer(nn.Module):
             # every y component (see ELBO formula)
             for y in range(self.num_classes):
                 z, _ = self.encoder.sample_z(y_distribution, z_distributions, y_usage="specific", y=y)
+                if self.reconstruct_all_steps:
+                    z = z.unsqueeze(1).repeat(1, self.timesteps + 1, 1)
 
                 # put in decoder to get likelihood
                 state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-                reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
+                reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=-1)
+                if self.reconstruct_all_steps:
+                    reward_loss = torch.mean(reward_loss, dim=1)
                 reward_losses[:, y] = reward_loss
 
                 if self.use_state_decoder:
-                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
+                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=-1)
+                    if self.reconstruct_all_steps:
+                        state_loss = torch.mean(state_loss, dim=1)
                     state_losses[:, y] = state_loss
                     nll_px[:, y] = self.loss_weight_state * state_loss + self.loss_weight_reward * reward_loss
                 else:

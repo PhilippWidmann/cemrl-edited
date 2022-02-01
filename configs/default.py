@@ -68,6 +68,7 @@ default_config = dict(
 
     reconstruction_params=dict(
         use_state_diff=False,  # determines if decoder uses state or state difference as target
+        reconstruct_all_timesteps=False,
         component_constraint_learning=False,  # enables providing base class information to the class encoder
         prior_mode='fixedOnY',  # options: 'fixedOnY' and 'network, determine if prior comes from a linear layer or is fixed on y
         prior_sigma=0.5,  # simga on prior when using fixedOnY prior

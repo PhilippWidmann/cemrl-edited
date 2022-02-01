@@ -214,6 +214,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['reconstruction_params']['prior_sigma'],
         True if variant['algo_params']['encoding_mode'] == 'transitionIndividualY' else False,
         variant['algo_params']['data_usage_reconstruction'],
+        variant['reconstruction_params']['reconstruct_all_timesteps']
     )
     if variant['algo_params']['encoding_mode'] == 'noEncoding':
         # debug case: completely omit any encoding and only do SAC training

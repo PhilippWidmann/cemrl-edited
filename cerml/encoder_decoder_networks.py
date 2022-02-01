@@ -370,10 +370,10 @@ class DecoderMDP(nn.Module):
     def forward(self, state, action, next_state, z):
         # Todo: next_state unused. Is this intentional?
         if self.use_state_decoder:
-            state_estimate = self.net_state_decoder(torch.cat([state, action, z], dim=1))
+            state_estimate = self.net_state_decoder(torch.cat([state, action, z], dim=-1))
         else:
             state_estimate = None
-        reward_estimate = self.net_reward_decoder(torch.cat([state, action, z], dim=1))
+        reward_estimate = self.net_reward_decoder(torch.cat([state, action, z], dim=-1))
 
         return state_estimate, reward_estimate
 
