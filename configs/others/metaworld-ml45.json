@@ -55,7 +55,6 @@
         "factor_qf_loss": 1.0,
         "train_val_percent": 0.8,
         "eval_interval": 50,
-        "early_stopping_threshold": 500,
-        "temp_folder": ".temp_cemrl"
+        "early_stopping_threshold": 500
     }
 }

@@ -155,6 +155,7 @@ class EncodingDebugger:
                  eval_interval,
                  early_stopping_threshold,
                  experiment_log_dir,
+                 temp_dir,
                  optimizer_class=optim.Adam
                  ):
 
@@ -165,6 +166,7 @@ class EncodingDebugger:
         self.encoder = encoder
         self.decoder = decoder
         self.experiment_log_dir = experiment_log_dir
+        self.temp_dir = temp_dir
         self.replay_buffer = replay_buffer
         self.eval_interval = eval_interval
         self.lr_decoder = lr_decoder
@@ -186,7 +188,7 @@ class EncodingDebugger:
         self.lowest_loss_epoch = 0
         self.lowest_loss = np.inf
 
-        self.temp_path = os.path.join(os.getcwd(), '.temp', self.experiment_log_dir.split('/')[-1])
+        self.temp_path = os.path.join(self.temp_dir, self.experiment_log_dir.split('/')[-1])
         self.decoder_path = os.path.join(self.temp_path, 'debugdecoder.pth')
         if not os.path.exists(self.temp_path):
             os.makedirs(self.temp_path)

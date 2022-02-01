@@ -35,6 +35,7 @@ class ReconstructionTrainer(nn.Module):
                  eval_interval,
                  early_stopping_threshold,
                  experiment_log_dir,
+                 temp_dir,
                  prior_mode,
                  prior_sigma,
                  isIndividualY,
@@ -64,6 +65,7 @@ class ReconstructionTrainer(nn.Module):
         self.eval_interval = eval_interval
         self.early_stopping_threshold = early_stopping_threshold
         self.experiment_log_dir = experiment_log_dir
+        self.temp_dir = temp_dir
         self.prior_mode = prior_mode
         self.prior_sigma = prior_sigma
         self.isIndividualY = isIndividualY
@@ -79,7 +81,7 @@ class ReconstructionTrainer(nn.Module):
         self.lowest_loss = np.inf
         self.lowest_loss_epoch = 0
 
-        self.temp_path = os.path.join(os.getcwd(), '.temp', self.experiment_log_dir.split('/')[-1])
+        self.temp_path = os.path.join(self.temp_dir, self.experiment_log_dir.split('/')[-1])
         self.encoder_path = os.path.join(self.temp_path, 'encoder.pth')
         self.decoder_path = os.path.join(self.temp_path, 'decoder.pth')
         if not os.path.exists(self.temp_path):

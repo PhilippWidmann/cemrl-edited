@@ -47,8 +47,8 @@ def setup_environment(variant):
                                       snapshot_points=encoding_save_epochs)
 
     # create temp folder
-    if not os.path.exists(variant['reconstruction_params']['temp_folder']):
-        os.makedirs(variant['reconstruction_params']['temp_folder'])
+    if not os.path.exists(variant['util_params']['temp_dir']):
+        os.makedirs(variant['util_params']['temp_dir'])
 
     # debugging triggers a lot of printing and logs to a debug directory
     DEBUG = variant['util_params']['debug']
@@ -210,6 +210,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['reconstruction_params']['eval_interval'],
         variant['reconstruction_params']['early_stopping_threshold'],
         experiment_log_dir,
+        variant['util_params']['temp_dir'],
         variant['reconstruction_params']['prior_mode'],
         variant['reconstruction_params']['prior_sigma'],
         True if variant['algo_params']['encoding_mode'] == 'transitionIndividualY' else False,
@@ -254,6 +255,7 @@ def initialize_networks(variant, env, experiment_log_dir):
             variant['reconstruction_params']['eval_interval'],
             variant['reconstruction_params']['early_stopping_threshold'],
             experiment_log_dir,
+            variant['util_params']['temp_dir'],
         )
     else:
         encoding_debugger = None

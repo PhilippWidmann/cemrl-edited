@@ -16,6 +16,7 @@ default_config = dict(
     showcase_itr=1000,  # training epoch from which to use weights of policy to showcase
     util_params=dict(
         base_log_dir=machine_config_dict['base_log_dir'],  # name of output directory
+        temp_dir=machine_config_dict['temp_dir'],  # temp directory for quicksaving the encoder and decoder during training
         use_gpu=machine_config_dict['use_gpu'],  # set True if GPU available and should be used
         use_multiprocessing=machine_config_dict['use_multiprocessing'],  # set True if data collection should be parallelized across CPUs
         num_workers=machine_config_dict['num_workers'],  # number of CPU workers for data collection
@@ -82,6 +83,5 @@ default_config = dict(
         train_val_percent=0.8,  # percentage of train samples vs. validation samples
         eval_interval=50,  # interval for evaluation with validation data and possible early stopping
         early_stopping_threshold=500,  # minimal epochs before early stopping after new minimum was found
-        temp_folder='.temp_cemrl'  # helper folder for storing encoder and decoder weights while training
     )
 )
