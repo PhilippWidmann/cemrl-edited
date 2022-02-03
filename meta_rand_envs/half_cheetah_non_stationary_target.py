@@ -75,6 +75,16 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         self.reset()
 
 
+class ObservableGoalHalfCheetahNonStationaryTargetEnv(HalfCheetahNonStationaryTargetEnv):
+    def _get_obs(self):
+        return np.concatenate([
+            self.sim.data.qpos.flat[1:],
+            self.get_body_com("torso").flat,
+            self.sim.data.qvel.flat,
+            np.array([self.active_task])
+        ]).astype(np.float32).flatten()
+
+
 class HalfCheetahNonStationaryTargetNormalizedRewardEnv(HalfCheetahNonStationaryTargetEnv):
     def _compute_reward(self, action, xposafter):
         vector_to_target = self.active_task - xposafter
