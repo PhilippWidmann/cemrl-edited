@@ -7,20 +7,21 @@ import numpy as np
 import click
 import json
 
-from analysis.plot_episode import plot_per_episode, get_plot_specification
-from configs.default import default_config
 import rlkit.torch.pytorch_util as ptu
-from configs.analysis_config import analysis_config
 
 import pickle
 
 from analysis.encoding import plot_encodings, plot_encodings_split
 from analysis.progress_logger import manage_logging
+from analysis.plot_episode import plot_per_episode, get_plot_specification
+import configs.legacy_default
+import configs.analysis_config
 
 from runner import setup_environment, initialize_networks, load_networks
 
 
 def analysis(variant):
+    all_figures = []
     # Prepare and load networks, just like for an actual run
     env, experiment_log_dir = setup_environment(variant)
     algorithm, networks, rollout_coordinator, replay_buffer, train_tasks, test_tasks = \
@@ -35,13 +36,15 @@ def analysis(variant):
     # showcase learned policy loaded
     showcase_itr = variant['showcase_itr']
     example_cases = variant['analysis_params']['example_cases']
-    save = variant['analysis_params']['save']
-
     path_to_folder = variant['path_to_weights']
-    save_dir = variant['save_dir'] if variant['save_dir'] != '' else variant['path_to_weights']
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    variant['save_prefix'] = variant['save_prefix'] + '_' if variant['save_prefix'] != '' else ''
+
+    save = variant['analysis_params']['save']
+    show = variant['analysis_params']['show']
+    if save:
+        save_dir = variant['save_dir'] if variant['save_dir'] is not None else os.path.join(variant['path_to_weights'], 'analysis/')
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        variant['save_prefix'] = variant['save_prefix'] + '_' if variant['save_prefix'] != '' else ''
     replay_buffer.stats_dict = pickle.load(open(os.path.join(path_to_folder, "replay_buffer_stats_dict_" + str(showcase_itr) + ".p"), "rb"))
     env.reset_task(np.random.randint(len(env.test_tasks)) + len(env.train_tasks))
     env.set_meta_mode('test')
@@ -68,13 +71,14 @@ def analysis(variant):
                 p = plot_spec_dict[i]
                 fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
 
+            all_figures.append((fig, axes))
             if save:
                 save_name = variant['save_prefix'] + \
                             'itr-' + str(showcase_itr) + '_' + \
                             'testcase-' + str(example_case) + '_' + \
                             str(plot_spec) + '.png'
                 fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
-            else:
+            if show:
                 fig.show()
 
     for plot_spec in variant['analysis_params']['multiple_episode_plots']:
@@ -84,16 +88,24 @@ def analysis(variant):
             for i, ax in enumerate(axes.flat):
                 p = plot_spec_dict[i]
                 fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
+
+        all_figures.append((fig, axes))
         if save:
             save_name = variant['save_prefix'] + \
                         'itr-' + str(showcase_itr) + '_' + \
                         'testcase-' + str(example_cases) + '_' + \
                         str(plot_spec) + '.png'
             fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
-        else:
+        if show:
             fig.show()
 
-    """
+    if len(all_figures) == 1:
+        return all_figures[0]
+    else:
+        return all_figures
+
+
+"""
     # visualize test cases
     for example_case in example_cases:
         results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
@@ -274,22 +286,9 @@ def deep_update_dict(fr, to):
             to[k] = v
     return to
 
-@click.command()
-@click.option('--weights', default=None)
-@click.option('--weights_itr', default=None)
-@click.option('--gpu', default=0)
-@click.option('--num_workers', default=8)
-@click.option('--use_mp', is_flag=True, default=False)
-@click.option('--docker', is_flag=True, default=False)
-@click.option('--debug', is_flag=True, default=False)
-def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
 
-    variant = deep_update_dict(analysis_config, default_config)
-
-    if weights is not None:
-        variant['path_to_weights'] = weights
-    if weights_itr is not None:
-        variant['showcase_itr'] = weights_itr
+def prepare_variant_file(analysis_goal_config):
+    variant = deep_update_dict(analysis_goal_config, configs.legacy_default.legacy_default_config)
 
     path_to_folder = variant['path_to_weights']
     with open(os.path.join(os.path.join(path_to_folder, 'variant.json'))) as f:
@@ -298,10 +297,6 @@ def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
     variant["env_params"] = deep_update_dict(exp_params["env_params"], variant["env_params"])
     variant["algo_params"] = deep_update_dict(exp_params["algo_params"], variant["algo_params"])
     variant["reconstruction_params"] = deep_update_dict(exp_params["reconstruction_params"], variant["reconstruction_params"])
-
-    variant['util_params']['gpu_id'] = gpu
-    variant['util_params']['use_multiprocessing'] = use_mp
-    variant['util_params']['num_workers'] = num_workers
 
     # set other time steps than while training
     if variant["analysis_params"]["manipulate_time_steps"]:
@@ -319,11 +314,28 @@ def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
     if variant["analysis_params"]["manipulate_test_task_number"]:
         variant["env_params"]["n_eval_tasks"] = variant["analysis_params"]["test_task_number"]
 
-    # backwards compatibility Todo: Remove
-    if 'policy_mode' not in variant['algo_params'].keys():
-        variant['algo_params']['policy_mode'] = 'sac_single'
-    if 'sampling_mode' not in variant['algo_params'].keys():
-        variant['algo_params']['sampling_mode'] = None
+    return variant
+
+
+@click.command()
+@click.option('--weights', default=None)
+@click.option('--weights_itr', default=None)
+@click.option('--gpu', default=0)
+@click.option('--num_workers', default=8)
+@click.option('--use_mp', is_flag=True, default=False)
+@click.option('--docker', is_flag=True, default=False)
+@click.option('--debug', is_flag=True, default=False)
+def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
+    variant = prepare_variant_file(configs.analysis_config.analysis_config)
+
+    if weights is not None:
+        variant['path_to_weights'] = weights
+    if weights_itr is not None:
+        variant['showcase_itr'] = weights_itr
+
+    variant['util_params']['gpu_id'] = gpu
+    variant['util_params']['use_multiprocessing'] = use_mp
+    variant['util_params']['num_workers'] = num_workers
 
     analysis(variant)
 
