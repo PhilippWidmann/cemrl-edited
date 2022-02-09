@@ -10,7 +10,6 @@ class StackedReplayBuffer:
                  action_dim,
                  task_indicator_dim,
                  permute_samples,
-                 encoding_mode,
                  sampling_mode=None):
         self._observation_dim = observation_dim
         self._action_dim = action_dim
@@ -47,7 +46,6 @@ class StackedReplayBuffer:
         self.task_info_dict = {}
 
         self.permute_samples = permute_samples
-        self.encoding_mode = encoding_mode
         self.sampling_mode = sampling_mode
 
     def add_episode(self, episode, task_nr=None):
@@ -245,11 +243,8 @@ class StackedReplayBuffer:
             perm = torch.randperm(encoder_input.shape[1]).long()
             encoder_input = encoder_input[:, perm]
 
-        if self.encoding_mode == 'trajectory':
-            # size: [batch_size, time_steps * (obs+action+reward)]
-            encoder_input = encoder_input.view(batch_size, -1)
-        elif self.encoding_mode == 'transitionSharedY' or self.encoding_mode == 'transitionIndividualY':
-            pass
+        if self.time_steps == -1:
+            raise NotImplementedError('The convention time_steps==-1 equals variable length input has not been implemented.')
 
         return encoder_input.to(ptu.device)
 

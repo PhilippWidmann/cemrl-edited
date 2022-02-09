@@ -1,16 +1,11 @@
-import numpy as np
 import torch
-
-from cerml.stacked_replay_buffer import StackedReplayBuffer
-from cerml.encoder_decoder_networks import EncoderMixtureModelTrajectory
-
 import rlkit.torch.pytorch_util as ptu
 
 
 class Relabeler:
     def __init__(self,
-                 encoder: EncoderMixtureModelTrajectory,
-                 replay_buffer: StackedReplayBuffer,
+                 encoder,
+                 replay_buffer,
                  batch_size_relabel,
                  action_space,
                  observation_space,
@@ -72,5 +67,3 @@ class Relabeler:
                                              ptu.get_numpy(y), ptu.get_numpy(next_y))
 
                 start += batch_size
-
-

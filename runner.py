@@ -17,8 +17,7 @@ from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
 
-from cerml.encoder_decoder_networks import PriorPz, EncoderMixtureModelTrajectory, EncoderMixtureModelTransitionSharedY, \
-    EncoderMixtureModelTransitionIndividualY, DecoderMDP, NoOpEncoder
+from cerml.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP, NoOpEncoder
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
@@ -81,35 +80,22 @@ def initialize_networks(variant, env, experiment_log_dir):
     num_classes = variant['reconstruction_params']['num_classes']
 
     # encoder used: single transitions or trajectories
-    if variant['algo_params']['encoding_mode'] == 'transitionSharedY':
-        encoder_input_dim = obs_dim + action_dim + reward_dim + obs_dim
-        shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
-        encoder_model = EncoderMixtureModelTransitionSharedY
-    elif variant['algo_params']['encoding_mode'] == 'transitionIndividualY':
-        encoder_input_dim = obs_dim + action_dim + reward_dim + obs_dim
-        shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
-        encoder_model = EncoderMixtureModelTransitionIndividualY
-    elif variant['algo_params']['encoding_mode'] == 'trajectory':
-        encoder_input_dim = time_steps * (obs_dim + action_dim + reward_dim + obs_dim)
-        shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
-        encoder_model = EncoderMixtureModelTrajectory
-    elif variant['algo_params']['encoding_mode'] == 'noEncoding':
+    if variant['algo_params']['encoder_type'] == 'NoEncoder':
         # debug case: completely omit any encoding and only do SAC training
-        encoder_input_dim = obs_dim + action_dim + reward_dim + obs_dim
-        shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
-        encoder_model = NoOpEncoder
+        encoder = NoOpEncoder()
     else:
-        raise NotImplementedError
-
-    encoder = encoder_model(
-        shared_dim,
-        encoder_input_dim,
-        latent_dim,
-        variant['algo_params']['batch_size_reconstruction'],
-        num_classes,
-        time_steps,
-        variant['algo_params']['merge_mode']
-    )
+        encoder = Encoder(
+            obs_dim,
+            action_dim,
+            reward_dim,
+            net_complex_enc_dec,
+            variant['algo_params']['encoder_type'],
+            latent_dim,
+            variant['algo_params']['batch_size_reconstruction'],
+            num_classes,
+            time_steps,
+            variant['algo_params']['encoder_merge_mode']
+        )
 
     decoder = DecoderMDP(
         action_dim,
@@ -155,7 +141,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         action_dim,
         latent_dim,
         variant['algo_params']['permute_samples'],
-        variant['algo_params']['encoding_mode'],
         variant['algo_params']['sampling_mode']
     )
 
@@ -179,7 +164,6 @@ def initialize_networks(variant, env, experiment_log_dir):
 
         variant['algo_params']['max_path_length'],
         variant['algo_params']['permute_samples'],
-        variant['algo_params']['encoding_mode'],
         variant['util_params']['use_multiprocessing'],
         variant['algo_params']['use_data_normalization'],
         variant['util_params']['num_workers'],
@@ -213,11 +197,10 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['util_params']['temp_dir'],
         variant['reconstruction_params']['prior_mode'],
         variant['reconstruction_params']['prior_sigma'],
-        True if variant['algo_params']['encoding_mode'] == 'transitionIndividualY' else False,
         variant['algo_params']['data_usage_reconstruction'],
         variant['reconstruction_params']['reconstruct_all_timesteps']
     )
-    if variant['algo_params']['encoding_mode'] == 'noEncoding':
+    if variant['algo_params']['encoder_type'] == 'NoEncoder':
         # debug case: completely omit any encoding and only do SAC training
         reconstruction_trainer = NoOpReconstructionTrainer()
 
@@ -236,7 +219,7 @@ def initialize_networks(variant, env, experiment_log_dir):
     )
 
     # Encoding Debug information; not necessary if code is used in production
-    if variant['util_params']['debug_encoding'] and (variant['algo_params']['encoding_mode'] != 'noEncoding'):
+    if variant['util_params']['debug_encoding'] and (variant['algo_params']['encoder_type'] != 'NoEncoder'):
         encoding_debugger = EncodingDebugger(
             action_dim,
             obs_dim,

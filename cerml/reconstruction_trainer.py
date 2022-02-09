@@ -38,7 +38,6 @@ class ReconstructionTrainer(nn.Module):
                  temp_dir,
                  prior_mode,
                  prior_sigma,
-                 isIndividualY,
                  data_usage_reconstruction,
                  reconstruct_all_steps,
                  optimizer_class=optim.Adam,
@@ -68,7 +67,6 @@ class ReconstructionTrainer(nn.Module):
         self.temp_dir = temp_dir
         self.prior_mode = prior_mode
         self.prior_sigma = prior_sigma
-        self.isIndividualY = isIndividualY
         self.data_usage_reconstruction = data_usage_reconstruction
         self.reconstruct_all_steps = reconstruct_all_steps
 
@@ -234,108 +232,37 @@ class ReconstructionTrainer(nn.Module):
         # Forward pass through encoder
         y_distribution, z_distributions = self.encoder.encode(encoder_input)
 
-        if self.isIndividualY:
-            kl_qz_pz = ptu.zeros(self.batch_size, self.timesteps, self.num_classes)
-            state_losses = ptu.zeros(self.batch_size, self.timesteps, self.num_classes)
-            reward_losses = ptu.zeros(self.batch_size, self.timesteps, self.num_classes)
-            nll_px = ptu.zeros(self.batch_size, self.timesteps, self.num_classes)
+        kl_qz_pz = ptu.zeros(self.batch_size, self.num_classes)
+        state_losses = ptu.zeros(self.batch_size, self.num_classes)
+        reward_losses = ptu.zeros(self.batch_size, self.num_classes)
+        nll_px = ptu.zeros(self.batch_size, self.num_classes)
 
-            # every y component (see ELBO formula)
-            for y in range(self.num_classes):
-                z, _ = self.encoder.sample_z(y_distribution, z_distributions, y_usage="specific", y=y)
+        # every y component (see ELBO formula)
+        for y in range(self.num_classes):
+            z, _ = self.encoder.sample_z(y_distribution, z_distributions, y_usage="specific", y=y)
+            if self.reconstruct_all_steps:
+                z = z.unsqueeze(1).repeat(1, self.timesteps + 1, 1)
+
+            # put in decoder to get likelihood
+            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
+            reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=-1)
+            if self.reconstruct_all_steps:
+                reward_loss = torch.mean(reward_loss, dim=1)
+            reward_losses[:, y] = reward_loss
+
+            if self.use_state_decoder:
+                state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=-1)
                 if self.reconstruct_all_steps:
-                    z = z.unsqueeze(1).repeat(1, self.timesteps + 1, 1)
-
-                # put in decoder to get likelihood
-                state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-                reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=-1)
-                if self.reconstruct_all_steps:
-                    reward_loss = torch.mean(reward_loss, dim=1)
-                reward_losses[:, :, y] = reward_loss.unsqueeze(1).repeat(1, self.timesteps)
-
-                if self.use_state_decoder:
-                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=-1)
-                    if self.reconstruct_all_steps:
-                        state_loss = torch.mean(state_loss, dim=1)
-                    state_losses[:, :, y] = state_loss.unsqueeze(1).repeat(1, self.timesteps)
-                    nll_px[:, :, y] = self.loss_weight_state * state_losses[:, :, y] + self.loss_weight_reward * reward_losses[:, :, y]
-                else:
-                    nll_px[:, :, y] = self.loss_weight_reward * reward_losses[:, :, y]
-
-                # KL ( q(z | x,y=k) || p(z|y=k) )
-                prior = self.prior_pz(y)
-                kl_qz_pz[:, :, y] = torch.sum(kl.kl_divergence(z_distributions[y], prior), dim=-1)
-
-            # KL ( q(y | x) || p(y) )
-            kl_qy_py = kl.kl_divergence(y_distribution, self.prior_py())
-
-            # Overall ELBO
-            if not self.component_constraint_learning:
-                elbo = torch.sum(torch.sum(torch.mul(y_distribution.probs, (-1) * nll_px - self.alpha_kl_z * kl_qz_pz), dim=-1) - self.beta_kl_y * kl_qy_py)
-
-            # Component-constraint_learing
-            if self.component_constraint_learning:
-                temp = ptu.zeros_like(y_distribution.probs)
-                index = ptu.from_numpy(np.array([a["base_task"] for a in true_task[:, 0].tolist()])).unsqueeze(1).expand(-1, self.timesteps).unsqueeze(2).long()
-                true_task_multiplier = temp.scatter(2, index, 1)
-                loss_ce = nn.CrossEntropyLoss(reduction='none')
-                elbo = torch.sum(torch.sum(torch.mul(true_task_multiplier, (-1) * nll_px - self.alpha_kl_z * kl_qz_pz), dim=-1) - loss_ce(y_distribution.probs, ptu.from_numpy(np.array([a["base_task"] for a in true_task[:, 0].tolist()])).unsqueeze(1).expand(-1, self.timesteps)))
-            # but elbo should be maximized, and backward function assumes minimization
-            loss = (-1) * elbo
-
-            # Optimization strategy:
-            # Decoder: the two head loss functions backpropagate their gradients into corresponding parts
-            # of the network, then ONE common optimizer compute all weight updates
-            # Encoder: the KLs and the likelihood from the decoder backpropagate their gradients into
-            # corresponding parts of the network, then ONE common optimizer computes all weight updates
-            # This is not done explicitly but all within the elbo loss.
-
-            self.optimizer_encoder.zero_grad()
-            self.optimizer_decoder.zero_grad()
-
-            # Backward pass: compute gradient of the loss with respect to model parameters
-            loss.backward()
-
-            # Calling the step function on an Optimizer makes an update to its parameters
-            self.optimizer_decoder.step()
-            self.optimizer_encoder.step()
-
-            return ptu.get_numpy(loss) / self.batch_size, ptu.get_numpy(
-                torch.sum(state_losses)) / self.batch_size, ptu.get_numpy(
-                torch.sum(reward_losses)) / self.batch_size
-
-        else:
-            kl_qz_pz = ptu.zeros(self.batch_size, self.num_classes)
-            state_losses = ptu.zeros(self.batch_size, self.num_classes)
-            reward_losses = ptu.zeros(self.batch_size, self.num_classes)
-            nll_px = ptu.zeros(self.batch_size, self.num_classes)
-
-            # every y component (see ELBO formula)
-            for y in range(self.num_classes):
-                z, _ = self.encoder.sample_z(y_distribution, z_distributions, y_usage="specific", y=y)
-                if self.reconstruct_all_steps:
-                    z = z.unsqueeze(1).repeat(1, self.timesteps + 1, 1)
-
-                # put in decoder to get likelihood
-                state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
-                reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=-1)
-                if self.reconstruct_all_steps:
-                    reward_loss = torch.mean(reward_loss, dim=1)
-                reward_losses[:, y] = reward_loss
-
-                if self.use_state_decoder:
-                    state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=-1)
-                    if self.reconstruct_all_steps:
-                        state_loss = torch.mean(state_loss, dim=1)
-                    state_losses[:, y] = state_loss
-                    nll_px[:, y] = self.loss_weight_state * state_loss + self.loss_weight_reward * reward_loss
-                else:
-                    nll_px[:, y] = self.loss_weight_reward * reward_loss
+                    state_loss = torch.mean(state_loss, dim=1)
+                state_losses[:, y] = state_loss
+                nll_px[:, y] = self.loss_weight_state * state_loss + self.loss_weight_reward * reward_loss
+            else:
+                nll_px[:, y] = self.loss_weight_reward * reward_loss
 
 
-                # KL ( q(z | x,y=k) || p(z|y=k) )
-                prior = self.prior_pz(y)
-                kl_qz_pz[:, y] = torch.sum(kl.kl_divergence(z_distributions[y], prior), dim=-1)
+            # KL ( q(z | x,y=k) || p(z|y=k) )
+            prior = self.prior_pz(y)
+            kl_qz_pz[:, y] = torch.sum(kl.kl_divergence(z_distributions[y], prior), dim=-1)
 
             # KL ( q(y | x) || p(y) )
             kl_qy_py = kl.kl_divergence(y_distribution, self.prior_py())
@@ -382,35 +309,21 @@ class ReconstructionTrainer(nn.Module):
         Just give back y with 0.01 variance
         '''
 
-        if self.isIndividualY:
-            if self.prior_mode == 'fixedOnY':
-                return torch.distributions.normal.Normal(ptu.ones(self.batch_size, self.timesteps, 1) * y,
-                                                         ptu.ones(self.batch_size, self.timesteps, 1) * self.prior_sigma)
+        if self.prior_mode == 'fixedOnY':
+            return torch.distributions.normal.Normal(ptu.ones(self.batch_size, self.latent_dim) * y,
+                                                     ptu.ones(self.batch_size, self.latent_dim) * self.prior_sigma)
 
-            elif self.prior_mode == 'network':
-                one_hot = ptu.zeros(self.batch_size, self.timesteps, self.num_classes)
-                one_hot[:, :, y] = 1
-                mu_sigma = self.prior_pz_layer(one_hot)#.detach()  # we do not want to backprop into prior
-                return generate_gaussian(mu_sigma, self.latent_dim)
-        else:
-            if self.prior_mode == 'fixedOnY':
-                return torch.distributions.normal.Normal(ptu.ones(self.batch_size, self.latent_dim) * y,
-                                                         ptu.ones(self.batch_size, self.latent_dim) * self.prior_sigma)
-
-            elif self.prior_mode == 'network':
-                one_hot = ptu.zeros(self.batch_size, self.num_classes)
-                one_hot[:, y] = 1
-                mu_sigma = self.prior_pz_layer(one_hot)#.detach() # we do not want to backprop into prior
-                return generate_gaussian(mu_sigma, self.latent_dim)
+        elif self.prior_mode == 'network':
+            one_hot = ptu.zeros(self.batch_size, self.num_classes)
+            one_hot[:, y] = 1
+            mu_sigma = self.prior_pz_layer(one_hot)#.detach() # we do not want to backprop into prior
+            return generate_gaussian(mu_sigma, self.latent_dim)
 
     def prior_py(self):
         '''
         Categorical uniform distribution
         '''
-        if self.isIndividualY:
-            return torch.distributions.categorical.Categorical(probs=ptu.ones(self.batch_size, self.timesteps, self.num_classes) * (1.0 / self.num_classes))
-        else:
-            return torch.distributions.categorical.Categorical(probs=ptu.ones(self.batch_size, self.num_classes) * (1.0 / self.num_classes))
+        return torch.distributions.categorical.Categorical(probs=ptu.ones(self.batch_size, self.num_classes) * (1.0 / self.num_classes))
 
     def validate(self, indices):
         with torch.no_grad():

@@ -25,7 +25,6 @@ class RolloutCoordinator:
                  time_steps,
                  max_path_length,
                  permute_samples,
-                 encoding_mode,
 
                  use_multiprocessing,
                  use_data_normalization,
@@ -42,7 +41,6 @@ class RolloutCoordinator:
         self.time_steps = time_steps
         self.max_path_length = max_path_length
         self.permute_samples = permute_samples
-        self.encoding_mode = encoding_mode
 
         self.use_multiprocessing = use_multiprocessing
         self.use_data_normalization = use_data_normalization
@@ -79,7 +77,7 @@ class RolloutCoordinator:
             self.agent.policy.to('cpu')#, 'policy')
             self.agent.encoder.to('cpu')
             workers = [RemoteRolloutWorker.remote(None, self.env_name, self.env_args, self.train_or_showcase,
-                                                  self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.encoding_mode, self.gpu_id, self.scripted_policy,
+                                                  self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
                                                   self.use_multiprocessing, self.use_data_normalization, self.replay_buffer.stats_dict,
                                                   task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = ray.get([worker.obtain_samples_from_list.remote(train_test,
@@ -87,7 +85,7 @@ class RolloutCoordinator:
                 save_frames=save_frames) for worker in workers])
         else:
             workers = [RolloutWorker(self.env, self.env_name, self.env_args, self.train_or_showcase,
-                                     self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.encoding_mode, self.gpu_id, self.scripted_policy,
+                                     self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
                                      self.use_multiprocessing, self.use_data_normalization, self.replay_buffer.stats_dict,
                                      task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = [[worker.obtain_samples(task, train_test,
@@ -157,7 +155,6 @@ class RolloutWorker:
                  time_steps,
                  max_path_length,
                  permute_samples,
-                 encoding_mode,
                  gpu_id,
                  scripted_policy,
                  use_multiprocessing,
@@ -181,7 +178,6 @@ class RolloutWorker:
         self.time_steps = time_steps
         self.max_path_length = max_path_length
         self.permute_samples = permute_samples
-        self.encoding_mode = encoding_mode
         self.gpu_id = gpu_id
         self.scripted_policy = scripted_policy
         self.use_data_normalization = use_data_normalization
@@ -358,15 +354,15 @@ class RolloutWorker:
         if self.permute_samples:
             perm = torch.LongTensor(torch.randperm(encoder_input.shape[0]))
             encoder_input = encoder_input[perm]
+        encoder_input.unsqueeze_(0)
 
-        if self.encoding_mode == 'trajectory':
-            encoder_input = encoder_input.view(1, -1)
-        if self.encoding_mode == 'transitionSharedY' or self.encoding_mode == 'transitionIndividualY':
-            encoder_input.unsqueeze_(0)
+        if self.time_steps == -1:
+            raise NotImplementedError('The convention time_steps==-1 equals variable length input has not been implemented.')
+
         return encoder_input.to(ptu.device)
 
 
 @ray.remote
 class RemoteRolloutWorker(RolloutWorker):
-    def __init__(self, env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, encoding_mode, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks):
-        super().__init__(env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, encoding_mode, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks)
+    def __init__(self, env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks):
+        super().__init__(env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks)
