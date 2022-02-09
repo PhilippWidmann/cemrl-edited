@@ -10,7 +10,6 @@
         "partially_observable": false
     },
     "algo_params": {
-        "use_relabeler": true,
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,

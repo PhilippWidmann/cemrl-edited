@@ -208,6 +208,7 @@ def initialize_networks(variant, env, experiment_log_dir):
     policy_trainer = PolicyTrainer(
         policy_networks,
         replay_buffer,
+        encoder,
         variant['algo_params']['batch_size_policy'],
         action_dim,
         variant['algo_params']['data_usage_sac'],

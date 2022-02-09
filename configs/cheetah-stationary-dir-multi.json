@@ -14,7 +14,6 @@
     "algo_params": {
         "policy_mode": "sac_multiple",
         "num_policy_nets": 2,
-        "use_relabeler": true,
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,

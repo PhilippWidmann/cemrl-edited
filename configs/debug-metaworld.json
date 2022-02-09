@@ -12,7 +12,6 @@
         "base_log_dir": ".temp/debug/"
     },
     "algo_params": {
-        "use_relabeler": true,
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,

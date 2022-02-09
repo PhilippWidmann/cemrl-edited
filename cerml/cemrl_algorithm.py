@@ -167,9 +167,11 @@ class CEMRLAlgorithm:
 
             if epoch in logger._snapshot_points:
                 # store encoding
-                encoding_storage = self.replay_buffer.check_enc()
-                pickle.dump(encoding_storage,
-                            open(os.path.join(self.experiment_log_dir, "encoding_" + str(epoch) + ".p"), "wb"))
+                # if we don't use the relabeler, the encodings are inaccurate and should not be used
+                if self.use_relabeler:
+                    encoding_storage = self.replay_buffer.check_enc()
+                    pickle.dump(encoding_storage,
+                                open(os.path.join(self.experiment_log_dir, "encoding_" + str(epoch) + ".p"), "wb"))
 
                 # replay stats dict
                 pickle.dump(self.replay_buffer.stats_dict,

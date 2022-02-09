@@ -22,6 +22,7 @@ class PolicyTrainer:
             policy_networks: SACNetworks,
 
             replay_buffer,
+            encoder,
             batch_size,
 
             env_action_space,
@@ -52,6 +53,7 @@ class PolicyTrainer:
         self.target_update_period = target_update_period
 
         self.replay_buffer = replay_buffer
+        self.encoder = encoder
         self.batch_size = batch_size
 
         self.env_action_space = env_action_space
@@ -144,7 +146,8 @@ class PolicyTrainer:
         # get data from replay buffer
         if step == 0:
             gt.stamp('pt_before_sample')
-        batch = self.replay_buffer.sample_random_batch(indices, self.batch_size)
+        batch_enc, batch = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size,
+                                                                           normalize=True, return_sac_data=True)
         if step == 0:
             gt.stamp('pt_sample')
 
@@ -153,8 +156,14 @@ class PolicyTrainer:
         obs = ptu.from_numpy(batch['observations'])
         actions = ptu.from_numpy(batch['actions'])
         next_obs = ptu.from_numpy(batch['next_observations'])
-        task_z = ptu.from_numpy(batch['task_indicators'])
-        task_y = ptu.from_numpy(batch['base_task_indicators'])
+
+        encoder_input = self.replay_buffer.make_encoder_data(batch_enc, self.batch_size)
+        task_z, task_y = self.encoder(encoder_input)
+        task_z = task_z.detach()
+        task_y = task_y.detach()
+        # Without rela
+        # task_z = ptu.from_numpy(batch['task_indicators'])
+        # task_y = ptu.from_numpy(batch['base_task_indicators'])
         # new_task_z = ptu.from_numpy(batch['next_task_indicators'])
         # new_task_y = ptu.from_numpy(batch['next_base_task_indicators'])
         if step == 0:
