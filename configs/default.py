@@ -22,7 +22,7 @@ default_config = dict(
         num_workers=machine_config_dict['num_workers'],  # number of CPU workers for data collection
         gpu_id=machine_config_dict['gpu_id'],  # number of GPU if machine with multiple GPUs
         debug=False,  # debugging triggers printing and writes logs to debug directory
-        debug_encoding=True,
+        debug_encoding=False,
         plot=False  # plot figures of progress for reconstruction and policy training
     ),
 

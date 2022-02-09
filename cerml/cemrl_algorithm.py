@@ -130,8 +130,8 @@ class CEMRLAlgorithm:
                 gt.stamp('relabeler')
 
                 # Intermission: Collect debug information on the encoding
-                print("Encoding debug information ...")
                 if self.encoding_debugger is not None:
+                    print("Encoding debug information ...")
                     self.encoding_debugger.record_debug_info(self.num_reconstruction_steps)
                 gt.stamp('debug_encoding')
 
