@@ -95,3 +95,59 @@ class SharedEncoderGRU(SharedEncoderBase):
     def forward(self, x):
         _, h = self.layers(x)
         return h.squeeze(dim=0)
+
+
+class SharedEncoderConv(SharedEncoderBase):
+    returns_timestep_encodings = False
+
+    def __init__(
+            self,
+            state_dim,
+            acton_dim,
+            reward_dim,
+            net_complex_enc_dec,
+    ):
+        super(SharedEncoderConv, self).__init__(state_dim, acton_dim, reward_dim, net_complex_enc_dec)
+
+        self.layers = nn.Sequential(
+            nn.Conv1d(self.encoder_input_dim, self.shared_dim, kernel_size=5),
+            nn.ReLU(),
+            nn.MaxPool1d(2, ceil_mode=True),
+            nn.Conv1d(self.shared_dim, self.shared_dim, kernel_size=3),
+            nn.ReLU(),
+            nn.MaxPool1d(2, ceil_mode=True),
+            nn.Flatten(start_dim=1),
+            nn.LazyLinear(out_features=self.shared_dim)
+        )
+
+    def forward(self, x):
+        # Input is in format (batch, time_step, feature), but Conv1d expects (batch, feature, time_step)
+        x = x.permute((0, 2, 1))
+        return self.layers(x)
+
+
+class SharedEncoderFCN(SharedEncoderBase):
+    returns_timestep_encodings = False
+
+    def __init__(
+            self,
+            state_dim,
+            acton_dim,
+            reward_dim,
+            net_complex_enc_dec,
+    ):
+        super(SharedEncoderFCN, self).__init__(state_dim, acton_dim, reward_dim, net_complex_enc_dec)
+
+        self.layers = nn.Sequential(
+            nn.Conv1d(self.encoder_input_dim, self.shared_dim, kernel_size=5),
+            nn.ReLU(),
+            nn.Conv1d(self.shared_dim, self.shared_dim, kernel_size=3),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool1d(output_size=1)
+        )
+
+    def forward(self, x):
+        # Input is in format (batch, time_step, feature), but Conv1d expects (batch, feature, time_step)
+        x = x.permute((0, 2, 1))
+        x = self.layers(x)
+        return x.squeeze(dim=2)
