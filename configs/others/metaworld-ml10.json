@@ -12,7 +12,7 @@
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
-        "encoding_mode": "transitionIndividualY",
+        "encoder_type": "TimestepMLP",
         "use_fixed_seeding": true,
         "batch_size_reconstruction": 512,
         "batch_size_combination": 512,

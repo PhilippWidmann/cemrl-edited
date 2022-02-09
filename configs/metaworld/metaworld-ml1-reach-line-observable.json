@@ -14,7 +14,7 @@
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
-        "encoding_mode": "noEncoding",
+        "encoder_type": "NoEncoder",
         "use_fixed_seeding": true,
         "batch_size_reconstruction": 256,
         "batch_size_combination": 256,

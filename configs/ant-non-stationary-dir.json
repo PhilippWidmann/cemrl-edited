@@ -16,7 +16,7 @@
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
-        "encoding_mode": "transitionSharedY",
+        "encoder_type": "TimestepMLP",
         "use_fixed_seeding": true,
         "seed": 0,
         "batch_size_reconstruction": 128,
