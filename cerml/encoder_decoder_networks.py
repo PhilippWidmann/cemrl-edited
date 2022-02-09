@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from rlkit.torch.networks import Mlp
 import rlkit.torch.pytorch_util as ptu
 from cerml.utils import generate_gaussian
-from cerml.shared_encoder_variants import SharedEncoderTimestepMLP, SharedEncoderTrajectoryMLP
+from cerml.shared_encoder_variants import SharedEncoderTimestepMLP, SharedEncoderTrajectoryMLP, SharedEncoderGRU
 
 
 class ClassEncoder(nn.Module):
@@ -60,6 +60,8 @@ class Encoder(nn.Module):
         elif encoder_type == 'TrajectoryMLP':
             self.shared_encoder = SharedEncoderTrajectoryMLP(state_dim, action_dim, reward_dim, net_complex_enc_dec,
                                                              time_steps)
+        elif encoder_type == 'GRU':
+            self.shared_encoder = SharedEncoderGRU(state_dim, action_dim, reward_dim, net_complex_enc_dec)
         else:
             raise ValueError(f'Unknown encoder type "{encoder_type}"')
 

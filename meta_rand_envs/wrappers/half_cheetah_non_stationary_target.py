@@ -19,6 +19,7 @@ class HalfCheetahNonStationaryTargetWrappedEnv(HalfCheetahNonStationaryTargetEnv
 
 @register_env('cheetah-stationary-target-normalizedReward')
 @register_env('cheetah-stationary-target-normalizedReward-allT')
+@register_env('cheetah-stationary-target-normalizedReward-allT-GRU')
 @register_env('cheetah-non-stationary-target-normalizedReward')
 class HalfCheetahNonStationaryTargetNormalizedRewardWrappedEnv(HalfCheetahNonStationaryTargetNormalizedRewardEnv):
     def __init__(self, *args, **kwargs):
