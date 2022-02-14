@@ -27,6 +27,7 @@ class PolicyTrainer:
 
             env_action_space,
             data_usage_sac,
+            use_data_normalization,
 
             discount=0.99,
             reward_scale=1.0,
@@ -58,6 +59,7 @@ class PolicyTrainer:
 
         self.env_action_space = env_action_space
         self.data_usage_sac = data_usage_sac
+        self.use_data_normalization = use_data_normalization
 
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
         self.use_parametrized_alpha = use_parametrized_alpha
@@ -147,7 +149,7 @@ class PolicyTrainer:
         if step == 0:
             gt.stamp('pt_before_sample')
         batch_enc, batch = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size,
-                                                                           normalize=True, return_sac_data=True)
+                                                                           normalize=self.use_data_normalization, return_sac_data=True)
         if step == 0:
             gt.stamp('pt_sample')
 

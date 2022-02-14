@@ -151,6 +151,7 @@ class EncodingDebugger:
                  num_classes,
                  lr_decoder,
                  state_reconstruction_clip,
+                 use_data_normalization,
                  train_val_percent,
                  eval_interval,
                  early_stopping_threshold,
@@ -173,6 +174,7 @@ class EncodingDebugger:
         self.optimizer_class = optimizer_class
         self.early_stopping_threshold = early_stopping_threshold
         self.validation_batch_size = validation_batch_size
+        self.use_data_normalization = use_data_normalization
 
         self.factor_state_loss = 1
         self.factor_reward_loss = self.state_reconstruction_clip
@@ -208,7 +210,7 @@ class EncodingDebugger:
         mi_y_base, mi_y_spec, mi_y_r = [], [], []
         mi_r_base, mi_r_spec = [], []
         for i in range(repetitions):
-            data = self.replay_buffer.sample_random_few_step_batch(all_ind, val_batch_size, normalize=True)
+            data = self.replay_buffer.sample_random_few_step_batch(all_ind, val_batch_size, normalize=self.use_data_normalization)
 
             encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
             y_distribution, z_distribution = self.encoder.encode(encoder_input)
@@ -300,7 +302,7 @@ class EncodingDebugger:
         logger.record_tabular("Only_latent_reconstruction_val_reward_loss", validation_val)
 
     def decoder_training_step(self, indices, epoch):
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=True)
+        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=self.use_data_normalization)
         encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
         decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
 
@@ -330,7 +332,7 @@ class EncodingDebugger:
 
     def decoder_validate(self, indices):
         with torch.no_grad():
-            data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=True)
+            data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=self.use_data_normalization)
             encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
             decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
 

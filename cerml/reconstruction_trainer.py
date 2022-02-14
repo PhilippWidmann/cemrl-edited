@@ -31,6 +31,7 @@ class ReconstructionTrainer(nn.Module):
                  component_constraint_learning,
                  state_reconstruction_clip,
                  use_state_decoder,
+                 use_data_normalization,
                  train_val_percent,
                  eval_interval,
                  early_stopping_threshold,
@@ -60,6 +61,7 @@ class ReconstructionTrainer(nn.Module):
         self.component_constraint_learning = component_constraint_learning
         self.state_reconstruction_clip = state_reconstruction_clip
         self.use_state_decoder = use_state_decoder
+        self.use_data_normalization = use_data_normalization
         self.train_val_percent = train_val_percent
         self.eval_interval = eval_interval
         self.early_stopping_threshold = early_stopping_threshold
@@ -205,7 +207,7 @@ class ReconstructionTrainer(nn.Module):
 
         # get data from replay buffer
         # TODO: for validation data use all data --> batch size == validation size
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=True)
+        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=self.use_data_normalization)
 
         # prepare for usage in encoder
         encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
@@ -328,7 +330,7 @@ class ReconstructionTrainer(nn.Module):
     def validate(self, indices):
         with torch.no_grad():
             # get data from replay buffer
-            data = self.replay_buffer.sample_random_few_step_batch(indices, self.validation_batch_size, normalize=True)
+            data = self.replay_buffer.sample_random_few_step_batch(indices, self.validation_batch_size, normalize=self.use_data_normalization)
 
             # prepare for usage in encoder
             encoder_input = self.replay_buffer.make_encoder_data(data, self.validation_batch_size)
