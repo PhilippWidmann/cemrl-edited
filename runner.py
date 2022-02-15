@@ -166,6 +166,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['permute_samples'],
         variant['util_params']['use_multiprocessing'],
         variant['algo_params']['use_data_normalization'],
+        variant['algo_params']['use_sac_data_normalization'],
         variant['util_params']['num_workers'],
         variant['util_params']['gpu_id'],
         variant['env_params']['scripted_policy']
@@ -214,6 +215,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         action_dim,
         variant['algo_params']['data_usage_sac'],
         variant['algo_params']['use_data_normalization'],
+        variant['algo_params']['use_sac_data_normalization'],
         policy_lr=variant['algo_params']['lr_policy'],
         qf_lr=variant['algo_params']['lr_qf'],
         use_parametrized_alpha=variant['algo_params']['use_parametrized_alpha'],

@@ -28,6 +28,7 @@ class RolloutCoordinator:
 
                  use_multiprocessing,
                  use_data_normalization,
+                 use_sac_data_normalization,
                  num_workers,
                  gpu_id,
                  scripted_policy
@@ -44,6 +45,7 @@ class RolloutCoordinator:
 
         self.use_multiprocessing = use_multiprocessing
         self.use_data_normalization = use_data_normalization
+        self.use_sac_data_normalization = use_sac_data_normalization
         self.num_workers = num_workers
         self.gpu_id = gpu_id
         self.scripted_policy = scripted_policy
@@ -78,7 +80,7 @@ class RolloutCoordinator:
             self.agent.encoder.to('cpu')
             workers = [RemoteRolloutWorker.remote(None, self.env_name, self.env_args, self.train_or_showcase,
                                                   self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
-                                                  self.use_multiprocessing, self.use_data_normalization, self.replay_buffer.stats_dict,
+                                                  self.use_multiprocessing, self.use_data_normalization, self.use_sac_data_normalization, self.replay_buffer.stats_dict,
                                                   task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = ray.get([worker.obtain_samples_from_list.remote(train_test,
                 deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated,
@@ -86,7 +88,7 @@ class RolloutCoordinator:
         else:
             workers = [RolloutWorker(self.env, self.env_name, self.env_args, self.train_or_showcase,
                                      self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
-                                     self.use_multiprocessing, self.use_data_normalization, self.replay_buffer.stats_dict,
+                                     self.use_multiprocessing, self.use_data_normalization, self.use_sac_data_normalization, self.replay_buffer.stats_dict,
                                      task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = [[worker.obtain_samples(task, train_test,
                 deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated,
@@ -159,6 +161,7 @@ class RolloutWorker:
                  scripted_policy,
                  use_multiprocessing,
                  use_data_normalization,
+                 use_sac_data_normalization,
                  replay_buffer_stats_dict,
                  task_list,
                  env_tasks,
@@ -181,6 +184,7 @@ class RolloutWorker:
         self.gpu_id = gpu_id
         self.scripted_policy = scripted_policy
         self.use_data_normalization = use_data_normalization
+        self.use_sac_data_normalization = use_sac_data_normalization
 
         self.replay_buffer_stats_dict = replay_buffer_stats_dict
         self.task_list = task_list
@@ -249,7 +253,12 @@ class RolloutWorker:
             self.env.render()
         while path_length < max_path_length:
             agent_input = self.build_encoder_input(o, self.context, action_space)
-            out = self.agent.get_action(agent_input, o, deterministic=deterministic, z_debug=None, env=self.env)
+            if self.use_sac_data_normalization and self.replay_buffer_stats_dict is not None:
+                o_input = (o - self.replay_buffer_stats_dict["observations"]["mean"]) \
+                          / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
+            else:
+                o_input = o
+            out = self.agent.get_action(agent_input, o_input, deterministic=deterministic, z_debug=None, env=self.env)
             a, agent_info = out[0]
             task_indicator = out[1]
             base_task_indicator = out[2]
@@ -280,8 +289,13 @@ class RolloutWorker:
                 break
 
         agent_input = self.build_encoder_input(next_o, self.context, action_space)
+        if self.use_sac_data_normalization and self.replay_buffer_stats_dict is not None:
+            next_o_input = (next_o - self.replay_buffer_stats_dict["observations"]["mean"]) \
+                      / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
+        else:
+            next_o_input = next_o
         _, next_task_indicator, next_base_task_indicator = \
-            self.agent.get_action(agent_input, next_o, deterministic=deterministic, env=self.env)
+            self.agent.get_action(agent_input, next_o_input, deterministic=deterministic, env=self.env)
         actions = np.array(actions)
         if len(actions.shape) == 1:
             actions = np.expand_dims(actions, 1)
@@ -364,5 +378,5 @@ class RolloutWorker:
 
 @ray.remote
 class RemoteRolloutWorker(RolloutWorker):
-    def __init__(self, env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks):
-        super().__init__(env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks)
+    def __init__(self, env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, use_sac_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks):
+        super().__init__(env, env_name, env_args, train_or_showcase, agent, time_steps, max_path_length, permute_samples, gpu_id,  scripted_policy, use_multiprocessing, use_data_normalization, use_sac_data_normalization, replay_buffer_stats_dict, task_list, tasks, train_tasks, test_tasks)

@@ -32,6 +32,7 @@ legacy_default_config = dict(
         use_relabeler=False, # if data should be relabeled
         use_combination_trainer=False,  # if combination trainer (gradients from Decoder and SAC should be used, currently broken
         use_data_normalization=True,  # if data become normalized, set in correspondence to use_combination_trainer
+        use_sac_data_normalization=False,
         use_parametrized_alpha=False,  # alpha conditioned on z
         encoder_type='TimestepMLP',
         encoder_merge_mode="add",  # if encoder_type==TimestepMLP: how to merge y infos: "add", "add_softmax", "multiply", "linear", "mlp"

@@ -176,13 +176,16 @@ class StackedReplayBuffer:
 
         return data
 
-    def sample_random_few_step_batch(self, points, batch_size, normalize=True, prio=None, return_sac_data=False):
+    def sample_random_few_step_batch(self, points, batch_size, normalize=True, normalize_sac=False, prio=None, return_sac_data=False):
         ''' batch of unordered small sequences of transitions '''
         indices = self.get_indices(points, batch_size, prio=prio)
         if not return_sac_data:
             return self.sample_few_step_batch(indices, batch_size, normalize=normalize)
         else:
-            return self.sample_few_step_batch(indices, batch_size, normalize=normalize), self.sample_data(indices)
+            sac_data = self.sample_data(indices)
+            if normalize_sac:
+                sac_data = self.normalize_data(sac_data)
+            return self.sample_few_step_batch(indices, batch_size, normalize=normalize), sac_data
 
     def sample_relabeler_data_batch(self, start, batch_size):
         points = self._allowed_points[start:start+batch_size]
