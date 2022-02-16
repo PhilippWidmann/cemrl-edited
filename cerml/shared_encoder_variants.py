@@ -110,10 +110,10 @@ class SharedEncoderConv(SharedEncoderBase):
         super(SharedEncoderConv, self).__init__(state_dim, acton_dim, reward_dim, net_complex_enc_dec)
 
         self.layers = nn.Sequential(
-            nn.Conv1d(self.encoder_input_dim, self.shared_dim, kernel_size=5),
+            nn.Conv1d(self.encoder_input_dim, self.encoder_input_dim, kernel_size=7),
             nn.ReLU(),
             nn.MaxPool1d(2, ceil_mode=True),
-            nn.Conv1d(self.shared_dim, self.shared_dim, kernel_size=3),
+            nn.Conv1d(self.encoder_input_dim, self.encoder_input_dim, kernel_size=3),
             nn.ReLU(),
             nn.MaxPool1d(2, ceil_mode=True),
             nn.Flatten(start_dim=1),
@@ -139,9 +139,9 @@ class SharedEncoderFCN(SharedEncoderBase):
         super(SharedEncoderFCN, self).__init__(state_dim, acton_dim, reward_dim, net_complex_enc_dec)
 
         self.layers = nn.Sequential(
-            nn.Conv1d(self.encoder_input_dim, self.shared_dim, kernel_size=5),
+            nn.Conv1d(self.encoder_input_dim, self.encoder_input_dim, kernel_size=7),
             nn.ReLU(),
-            nn.Conv1d(self.shared_dim, self.shared_dim, kernel_size=3),
+            nn.Conv1d(self.encoder_input_dim, self.shared_dim, kernel_size=3),
             nn.ReLU(),
             nn.AdaptiveAvgPool1d(output_size=1)
         )
