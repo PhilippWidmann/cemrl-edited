@@ -10,7 +10,10 @@ from . import register_env
 
 @register_env('cheetah-stationary-target')
 @register_env('cheetah-stationary-target-allT')
-@register_env('cheetah-stationary-target-twosided-allT')
+@register_env('cheetah-stationary-targetTwosided-allT')
+@register_env('cheetah-stationary-targetTwosided-allT-GRU')
+@register_env('cheetah-stationary-targetTwosided-allT-FCN')
+@register_env('cheetah-stationary-targetTwosided-allT-Conv')
 @register_env('cheetah-non-stationary-target')
 class HalfCheetahNonStationaryTargetWrappedEnv(HalfCheetahNonStationaryTargetEnv):
     def __init__(self, *args, **kwargs):
@@ -22,6 +25,10 @@ class HalfCheetahNonStationaryTargetWrappedEnv(HalfCheetahNonStationaryTargetEnv
 @register_env('cheetah-stationary-target-normalizedReward-allT-GRU')
 @register_env('cheetah-stationary-target-normalizedReward-allT-Conv')
 @register_env('cheetah-stationary-target-normalizedReward-allT-FCN')
+@register_env('cheetah-stationary-targetTwosided-normalizedReward-allT')
+@register_env('cheetah-stationary-targetTwosided-normalizedReward-allT-GRU')
+@register_env('cheetah-stationary-targetTwosided-normalizedReward-allT-Conv')
+@register_env('cheetah-stationary-targetTwosided-normalizedReward-allT-FCN')
 @register_env('cheetah-non-stationary-target-normalizedReward')
 class HalfCheetahNonStationaryTargetNormalizedRewardWrappedEnv(HalfCheetahNonStationaryTargetNormalizedRewardEnv):
     def __init__(self, *args, **kwargs):
