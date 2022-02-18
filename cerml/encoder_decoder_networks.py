@@ -227,23 +227,3 @@ class DecoderMDP(nn.Module):
         reward_estimate = self.net_reward_decoder(torch.cat([state, action, z], dim=-1))
 
         return state_estimate, reward_estimate
-
-
-class NoOpEncoder(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self.latent_dim = 1
-
-    def forward(self, x):
-        if len(x.shape) == 2:
-            return torch.zeros((1, self.latent_dim), device=x.device), \
-                   torch.zeros(1, device=x.device)
-        else:
-            return torch.zeros((x.shape[0], self.latent_dim), device=x.device), \
-                   torch.zeros(x.shape[0], device=x.device)
-
-    def encode(self, x):
-        raise NotImplementedError('encode should not be called on NoOpEncoder')
-
-    def sample_z(self, y_distribution, z_distributions, y_usage="specific", y=None, sampler="random"):
-        raise NotImplementedError('sample_z should not be called on NoOpEncoder')

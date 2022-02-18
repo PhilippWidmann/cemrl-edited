@@ -17,7 +17,8 @@ from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
 
-from cerml.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP, NoOpEncoder
+from cerml.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP
+from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEncoder
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
@@ -82,20 +83,24 @@ def initialize_networks(variant, env, experiment_log_dir):
     # encoder used: single transitions or trajectories
     if variant['algo_params']['encoder_type'] == 'NoEncoder':
         # debug case: completely omit any encoding and only do SAC training
-        encoder = NoOpEncoder()
+        encoder_class = NoOpEncoder
+    elif variant['algo_params']['encoder_omit_actions']:
+        encoder_class = NoActionEncoder
     else:
-        encoder = Encoder(
-            obs_dim,
-            action_dim,
-            reward_dim,
-            net_complex_enc_dec,
-            variant['algo_params']['encoder_type'],
-            latent_dim,
-            variant['algo_params']['batch_size_reconstruction'],
-            num_classes,
-            time_steps,
-            variant['algo_params']['encoder_merge_mode']
-        )
+        encoder_class = Encoder
+
+    encoder = encoder_class(
+        obs_dim,
+        action_dim,
+        reward_dim,
+        net_complex_enc_dec,
+        variant['algo_params']['encoder_type'],
+        latent_dim,
+        variant['algo_params']['batch_size_reconstruction'],
+        num_classes,
+        time_steps,
+        variant['algo_params']['encoder_merge_mode']
+    )
 
     decoder = DecoderMDP(
         action_dim,
