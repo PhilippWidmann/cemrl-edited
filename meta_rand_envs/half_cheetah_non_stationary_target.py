@@ -94,6 +94,15 @@ class HalfCheetahNonStationaryTargetNormalizedRewardEnv(HalfCheetahNonStationary
         return reward, reward_ctrl, reward_run
 
 
+class HalfCheetahNonStationaryTargetQuadraticRewardEnv(HalfCheetahNonStationaryTargetEnv):
+    def _compute_reward(self, action, xposafter):
+        vector_to_target = self.active_task - xposafter
+        reward_run = -1.0 * vector_to_target**2
+        reward_ctrl = -0.5 * 1e-1 * np.sum(np.square(action))
+        reward = reward_ctrl + reward_run
+        return reward, reward_ctrl, reward_run
+
+
 class ObservableGoalHalfCheetahNonStationaryTargetNormalizedRewardEnv(HalfCheetahNonStationaryTargetNormalizedRewardEnv):
     def _get_obs(self):
         return np.concatenate([

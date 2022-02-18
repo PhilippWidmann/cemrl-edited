@@ -1,5 +1,5 @@
 {
-    "env_name": "cheetah-stationary-targetTwosided-allT-GRU",
+    "env_name": "cheetah-stationary-target-observable-goal",
     "env_params": {
         "n_train_tasks": 100,
         "n_eval_tasks": 30,
@@ -8,7 +8,7 @@
         "termination_possible": false,
         "positive_change_point_basis": 1000000,
         "negative_change_point_basis": -1000000,
-        "task_min_target": -10.0,
+        "task_min_target": -25.0,
         "task_max_target": 25.0,
         "change_point_interval": 1,
         "state_reconstruction_clip": 8
@@ -39,7 +39,7 @@
         "num_train_tasks_per_episode": 20,
         "num_transitions_initial": 0,
         "num_transitions_per_episode": 200,
-        "num_eval_trajectories": 2,
+        "num_eval_trajectories": 1,
         "showcase_every": 0,
         "num_showcase_deterministic": 1,
         "num_showcase_non_deterministic": 1,
@@ -50,7 +50,6 @@
     "reconstruction_params": {
         "use_state_diff": false,
         "component_constraint_learning": false,
-        "reconstruct_all_timesteps": true,
         "prior_mode": "fixedOnY",
         "prior_sigma": 0.5,
         "num_classes": 1,

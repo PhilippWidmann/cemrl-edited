@@ -1,5 +1,5 @@
 {
-    "env_name": "cheetah-stationary-targetTwosided-allT-GRU",
+    "env_name": "cheetah-stationary-target-quadraticReward",
     "env_params": {
         "n_train_tasks": 100,
         "n_eval_tasks": 30,
@@ -8,7 +8,7 @@
         "termination_possible": false,
         "positive_change_point_basis": 1000000,
         "negative_change_point_basis": -1000000,
-        "task_min_target": -10.0,
+        "task_min_target": 5.0,
         "task_max_target": 25.0,
         "change_point_interval": 1,
         "state_reconstruction_clip": 8
@@ -17,7 +17,7 @@
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
-        "encoder_type": "GRU",
+        "encoder_type": "Conv",
         "use_fixed_seeding": true,
         "seed": 0,
         "batch_size_reconstruction": 256,
@@ -39,7 +39,7 @@
         "num_train_tasks_per_episode": 20,
         "num_transitions_initial": 0,
         "num_transitions_per_episode": 200,
-        "num_eval_trajectories": 2,
+        "num_eval_trajectories": 1,
         "showcase_every": 0,
         "num_showcase_deterministic": 1,
         "num_showcase_non_deterministic": 1,

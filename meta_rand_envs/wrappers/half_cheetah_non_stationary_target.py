@@ -4,7 +4,7 @@ from meta_rand_envs.half_cheetah_non_stationary_target import HalfCheetahNonStat
     ObservableDistToGoalHalfCheetahNonStationaryTargetNormalizedRewardEnv, \
     ObservableRewardHalfCheetahNonStationaryTargetNormalizedRewardEnv, \
     ObservableDirToGoalHalfCheetahNonStationaryTargetNormalizedRewardEnv, \
-    ObservableGoalHalfCheetahNonStationaryTargetEnv
+    ObservableGoalHalfCheetahNonStationaryTargetEnv, HalfCheetahNonStationaryTargetQuadraticRewardEnv
 from . import register_env
 
 
@@ -16,6 +16,12 @@ from . import register_env
 @register_env('cheetah-stationary-targetTwosided-allT-Conv')
 @register_env('cheetah-non-stationary-target')
 class HalfCheetahNonStationaryTargetWrappedEnv(HalfCheetahNonStationaryTargetEnv):
+    def __init__(self, *args, **kwargs):
+        HalfCheetahNonStationaryTargetEnv.__init__(self, *args, **kwargs)
+
+
+@register_env('cheetah-stationary-target-quadraticReward')
+class HalfCheetahNonStationaryTargetQuadraticRewardWrappedEnv(HalfCheetahNonStationaryTargetQuadraticRewardEnv):
     def __init__(self, *args, **kwargs):
         HalfCheetahNonStationaryTargetEnv.__init__(self, *args, **kwargs)
 
