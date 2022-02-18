@@ -1,9 +1,9 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='./output/cheetah-stationary-target-normalizedReward-allT-GRU/2022_02_10_02_51_05',  # CONFIGURE! path to experiment folder
-    save_dir='./output_analysis/cheetah-stationary-target-normalizedReward-allT-GRU/2022_02_10_02_51_05',
+    path_to_weights='./output/cheetah-stationary-target-normalizedReward-allT/2022_02_14_17_39_50',  # CONFIGURE! path to experiment folder
+    save_dir='./output_analysis/cheetah-stationary-target-normalizedReward-allT/2022_02_14_17_39_50',
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
-    showcase_itr=250,  # CONFIGURE! epoch for which analysis is performed
+    showcase_itr=[150, 175, 200],  # CONFIGURE! epoch for which analysis is performed
     util_params=dict(
         base_log_dir='.temp',  # name of output directory
         use_gpu=True,  # set True if GPU available and should be used

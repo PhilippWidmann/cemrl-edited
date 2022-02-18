@@ -1,6 +1,7 @@
 # Continuous Embedding Meta Reinforcement Learning (CEMRL)
 
 import os, shutil
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,8 +20,21 @@ import configs.analysis_config
 
 from runner import setup_environment, initialize_networks, load_networks
 
+plt.rcParams.update({'font.size': 20})
+
 
 def analysis(variant):
+    if isinstance(variant['showcase_itr'], list):
+        l = variant['showcase_itr'].copy()
+        for itr in l:
+            variant['showcase_itr'] = itr
+            try:
+                res = analysis(variant)
+            except FileNotFoundError:
+                warnings.warn(f'Skipped iteration {itr} because the corresponding savefiles do not exist')
+        # Return last result from iteration list; no usecase currently
+        return res
+
     all_figures = []
     # Prepare and load networks, just like for an actual run
     env, experiment_log_dir = setup_environment(variant)
@@ -71,13 +85,15 @@ def analysis(variant):
                 p = plot_spec_dict[i]
                 fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
 
+            fig.tight_layout()
             all_figures.append((fig, axes))
             if save:
                 save_name = variant['save_prefix'] + \
                             'itr-' + str(showcase_itr) + '_' + \
                             'testcase-' + str(example_case) + '_' + \
                             str(plot_spec) + '.png'
-                fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
+                fig.tight_layout()
+                fig.savefig(os.path.join(save_dir, save_name), bbox_inches='tight')
             if show:
                 fig.show()
 
@@ -89,6 +105,7 @@ def analysis(variant):
                 p = plot_spec_dict[i]
                 fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
 
+        fig.tight_layout()
         all_figures.append((fig, axes))
         if save:
             save_name = variant['save_prefix'] + \
