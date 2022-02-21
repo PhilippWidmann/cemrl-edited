@@ -1,5 +1,5 @@
 {
-    "env_name": "cheetah-stationary-target-allT-noActions",
+    "env_name": "cheetah-stationary-target-quadraticReward-specialInput",
     "env_params": {
         "n_train_tasks": 100,
         "n_eval_tasks": 30,
@@ -18,7 +18,7 @@
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
         "encoder_type": "TimestepMLP",
-        "encoder_omit_input": "actions",
+        "encoder_omit_input": "special",
         "use_fixed_seeding": true,
         "seed": 0,
         "batch_size_reconstruction": 256,

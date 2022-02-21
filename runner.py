@@ -18,7 +18,7 @@ import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
 
 from cerml.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP
-from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEncoder
+from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEncoder, SpecialOmissionEncoder
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
@@ -84,8 +84,10 @@ def initialize_networks(variant, env, experiment_log_dir):
     if variant['algo_params']['encoder_type'] == 'NoEncoder':
         # debug case: completely omit any encoding and only do SAC training
         encoder_class = NoOpEncoder
-    elif variant['algo_params']['encoder_omit_actions']:
+    elif variant['algo_params']['encoder_omit_input'] == 'action':
         encoder_class = NoActionEncoder
+    elif variant['algo_params']['encoder_omit_input'] == 'special':
+        encoder_class = SpecialOmissionEncoder
     else:
         encoder_class = Encoder
 

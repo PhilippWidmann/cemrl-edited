@@ -40,6 +40,41 @@ class NoActionEncoder(Encoder):
         return super().encode(self.exclude_actions(x))
 
 
+class SpecialOmissionEncoder(Encoder):
+    def __init__(self,
+                 state_dim,
+                 action_dim,
+                 reward_dim,
+                 net_complex_enc_dec,
+                 encoder_type,
+                 latent_dim,
+                 batch_size,
+                 num_classes,
+                 time_steps=None,
+                 merge_mode=None
+                 ):
+        super().__init__(1, 0, reward_dim, net_complex_enc_dec, encoder_type, latent_dim, batch_size,
+                         num_classes, time_steps, merge_mode)
+        self.original_input_dim = state_dim + action_dim + reward_dim + state_dim
+        self.modified_input_dim = 3
+        # keep only reward and position
+        self.relevant_input_indices = [8, 26, 35]
+
+    def exclude_indices(self, x):
+        if x.shape[-1] == self.original_input_dim:
+            return x[..., self.relevant_input_indices]
+        elif x.shape[-1] == self.modified_input_dim:
+            return x
+        else:
+            raise ValueError(f'Unexpected input dimension {x.shape[-1]}')
+
+    def forward(self, x):
+        return super().forward(self.exclude_indices(x))
+
+    def encode(self, x):
+        return super().encode(self.exclude_indices(x))
+
+
 class NoOpEncoder(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__()

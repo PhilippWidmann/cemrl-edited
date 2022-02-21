@@ -18,7 +18,7 @@
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
         "encoder_type": "TimestepMLP",
-        "encoder_omit_actions": true,
+        "encoder_omit_input": "actions",
         "use_fixed_seeding": true,
         "seed": 0,
         "batch_size_reconstruction": 256,

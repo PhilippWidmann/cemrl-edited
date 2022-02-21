@@ -10,6 +10,7 @@ from . import register_env
 
 @register_env('cheetah-stationary-target')
 @register_env('cheetah-stationary-target-allT-noActions')
+@register_env('cheetah-stationary-target-allT-specialInput')
 @register_env('cheetah-stationary-target-allT')
 @register_env('cheetah-stationary-targetTwosided-allT')
 @register_env('cheetah-stationary-targetTwosided-allT-GRU')
@@ -23,6 +24,7 @@ class HalfCheetahNonStationaryTargetWrappedEnv(HalfCheetahNonStationaryTargetEnv
 
 @register_env('cheetah-stationary-target-quadraticReward')
 @register_env('cheetah-stationary-target-quadraticReward-noActions')
+@register_env('cheetah-stationary-target-quadraticReward-specialInput')
 class HalfCheetahNonStationaryTargetQuadraticRewardWrappedEnv(HalfCheetahNonStationaryTargetQuadraticRewardEnv):
     def __init__(self, *args, **kwargs):
         HalfCheetahNonStationaryTargetEnv.__init__(self, *args, **kwargs)
