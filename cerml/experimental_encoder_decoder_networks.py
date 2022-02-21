@@ -1,7 +1,7 @@
 import torch
 from torch import nn as nn
 
-from cerml.encoder_decoder_networks import Encoder
+from cerml.encoder_decoder_networks import Encoder, DecoderMDP
 
 
 class NoActionEncoder(Encoder):
@@ -51,14 +51,18 @@ class SpecialOmissionEncoder(Encoder):
                  batch_size,
                  num_classes,
                  time_steps=None,
-                 merge_mode=None
+                 merge_mode=None,
+                 relevant_input_indices=None
                  ):
-        super().__init__(1, 0, reward_dim, net_complex_enc_dec, encoder_type, latent_dim, batch_size,
+
+        if relevant_input_indices is not None:
+            self.relevant_input_indices = relevant_input_indices
+        else:
+            self.relevant_input_indices = [8, 26, 35]
+        super().__init__(0, len(self.relevant_input_indices), 0, net_complex_enc_dec, encoder_type, latent_dim, batch_size,
                          num_classes, time_steps, merge_mode)
         self.original_input_dim = state_dim + action_dim + reward_dim + state_dim
-        self.modified_input_dim = 3
-        # keep only reward and position
-        self.relevant_input_indices = [8, 26, 35]
+        self.modified_input_dim = len(relevant_input_indices)
 
     def exclude_indices(self, x):
         if x.shape[-1] == self.original_input_dim:
@@ -93,3 +97,23 @@ class NoOpEncoder(nn.Module):
 
     def sample_z(self, y_distribution, z_distributions, y_usage="specific", y=None, sampler="random"):
         raise NotImplementedError('sample_z should not be called on NoOpEncoder')
+
+
+class SpecialOmissionDecoder(DecoderMDP):
+    def __init__(self,
+                 action_dim,
+                 state_dim,
+                 reward_dim,
+                 z_dim,
+                 net_complex,
+                 state_reconstruction_clip,
+                 use_state_decoder):
+        super().__init__(action_dim, 1, reward_dim, z_dim, net_complex, state_reconstruction_clip, use_state_decoder)
+        # keep only reward and position
+        self.relevant_state_indices = [8]
+
+    def forward(self, state, action, next_state, z):
+        return super().forward(state[..., self.relevant_state_indices],
+                               torch.zeros(action.shape, device=action.device),
+                               None,  # next_state is unused
+                               z)

@@ -37,6 +37,7 @@ legacy_default_config = dict(
         encoder_type='TimestepMLP',
         encoder_merge_mode="add",  # if encoder_type==TimestepMLP: how to merge y infos: "add", "add_softmax", "multiply", "linear", "mlp"
         encoder_omit_input=None,  # Debug parameter: Should actions be ignored by VAE
+        decoder_omit_input=None,
         use_fixed_seeding=True,  # seeding, make comparison more robust
         seed=0,  # seed for torch and numpy
         batch_size_reconstruction=256,  # batch size reconstruction trainer

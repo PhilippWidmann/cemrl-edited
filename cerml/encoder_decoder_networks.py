@@ -46,7 +46,8 @@ class Encoder(nn.Module):
                  batch_size,
                  num_classes,
                  time_steps=None,
-                 merge_mode=None
+                 merge_mode=None,
+                 **kwargs
                  ):
         super(Encoder, self).__init__()
 

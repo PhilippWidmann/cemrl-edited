@@ -18,7 +18,8 @@ import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
 
 from cerml.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP
-from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEncoder, SpecialOmissionEncoder
+from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEncoder, SpecialOmissionEncoder, \
+    SpecialOmissionDecoder
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
@@ -88,8 +89,12 @@ def initialize_networks(variant, env, experiment_log_dir):
         encoder_class = NoActionEncoder
     elif variant['algo_params']['encoder_omit_input'] == 'special':
         encoder_class = SpecialOmissionEncoder
+        variant['algo_params']['encoder_omit_input'] = None
+    elif isinstance(variant['algo_params']['encoder_omit_input'], list):
+        encoder_class = SpecialOmissionEncoder
     else:
         encoder_class = Encoder
+        variant['algo_params']['encoder_omit_input'] = None
 
     encoder = encoder_class(
         obs_dim,
@@ -101,10 +106,16 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['batch_size_reconstruction'],
         num_classes,
         time_steps,
-        variant['algo_params']['encoder_merge_mode']
+        variant['algo_params']['encoder_merge_mode'],
+        relevant_input_indices=variant['algo_params']['encoder_omit_input']
     )
 
-    decoder = DecoderMDP(
+    if variant['algo_params']['decoder_omit_input'] == 'special':
+        decoder_class = SpecialOmissionDecoder
+    else:
+        decoder_class = DecoderMDP
+
+    decoder = decoder_class(
         action_dim,
         obs_dim,
         reward_dim,
@@ -367,7 +378,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/debug-cheetah.json")
+@click.argument('config', default="configs/experimental/cheetah-stationary-target-quadraticReward-allT-specialInput-2.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
