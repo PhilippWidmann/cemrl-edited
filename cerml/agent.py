@@ -17,14 +17,21 @@ class CEMRLAgent(nn.Module):
         self.prior_pz = prior_pz
         self.policy = policy
 
-    def get_action(self, encoder_input, state, deterministic=False, z_debug=None, env=None):
+    def get_action(self, encoder_input, state, deterministic=False, z_debug=None, env=None, return_distributions=False):
         state = ptu.from_numpy(state).view(1, -1)
-        z, y = self.encoder(encoder_input)
+        if return_distributions:
+            z, y, distribution = self.encoder(encoder_input, return_distributions)
+        else:
+            z, y = self.encoder(encoder_input)
         if z_debug is not None:
             z = z_debug
-        return self.policy.get_action(state, z, y, deterministic=deterministic), \
+        a, a_info = self.policy.get_action(state, z, y, deterministic=deterministic)
+        if return_distributions:
+            a_info['latent_distribution'] = distribution
+        return a, a_info, \
                np_ify(z.clone().detach())[0, :], \
                np_ify(y.clone().detach())[0]
+
 
 class ScriptedPolicyAgent(nn.Module):
     def __init__(self,

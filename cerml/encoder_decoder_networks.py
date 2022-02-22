@@ -83,16 +83,26 @@ class Encoder(nn.Module):
                                          hidden_sizes=[self.shared_encoder.shared_dim],
                                          output_size=self.shared_encoder.shared_dim)
 
-    def forward(self, x):
+    def forward(self, x, return_distributions=False):
         """
         Encode the provided context
         :param x: context of the form (batch_size, time_steps, obs + action + reward + next_obs)
+        :param return_distributions: If true, also return the distribution objects, not just a sampled data point
         :return: z - task indicator [batch_size, latent_dim]
                  y - base task indicator [batch_size]
         """
         y_distribution, z_distributions = self.encode(x)
         # TODO: could be more efficient if only compute the Gaussian layer of the y that we pick later
-        return self.sample_z(y_distribution, z_distributions, y_usage="most_likely", sampler="mean")
+        z, y = self.sample_z(y_distribution, z_distributions, y_usage="most_likely", sampler="mean")
+        if return_distributions:
+            distribution = {
+                'y_probs': y_distribution.probs.detach().cpu().numpy().squeeze(),
+                'z_means': [z.loc.detach().cpu().numpy().squeeze() for z in z_distributions],
+                'z_stds': [z.scale.detach().cpu().numpy().squeeze() for z in z_distributions]
+            }
+            return z, y, distribution
+        else:
+            return z, y
 
     def encode(self, x):
         # Compute shared encoder forward pass

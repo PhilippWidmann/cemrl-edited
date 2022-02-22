@@ -60,7 +60,7 @@ class RolloutCoordinator:
                 # driver_object_store_memory=1000 * 1024 * 1024
             )
 
-    def collect_data(self, tasks, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False):
+    def collect_data(self, tasks, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
         """
         Distribute tasks over workers
         :return: Trajectories as a list of list of list (workers, tasks, (path_dict, num_env_steps))
@@ -84,7 +84,7 @@ class RolloutCoordinator:
                                                   task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = ray.get([worker.obtain_samples_from_list.remote(train_test,
                 deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated,
-                save_frames=save_frames) for worker in workers])
+                save_frames=save_frames, return_distributions=return_distributions) for worker in workers])
         else:
             workers = [RolloutWorker(self.env, self.env_name, self.env_args, self.train_or_showcase,
                                      self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
@@ -92,7 +92,7 @@ class RolloutCoordinator:
                                      task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = [[worker.obtain_samples(task, train_test,
                 deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated,
-                save_frames=save_frames
+                save_frames=save_frames, return_distributions=return_distributions
             ) for task in task_list] for worker, task_list in zip(workers, tasks_per_worker)]
 
         self.agent.to(ptu.device)
@@ -197,15 +197,15 @@ class RolloutWorker:
         self.obs_space = self.env.observation_space.low.size
         self.context = None
 
-    def obtain_samples_from_list(self, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False):
+    def obtain_samples_from_list(self, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
         results = []
         for task in self.task_list:
-            result = self.obtain_samples(task, train_test, deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated, save_frames=save_frames)
+            result = self.obtain_samples(task, train_test, deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated, save_frames=save_frames, return_distributions=return_distributions)
             results.append(result)
 
         return results
 
-    def obtain_samples(self, task, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False):
+    def obtain_samples(self, task, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
         """
         Obtains samples in the environment until either we reach either max_samples transitions or
         num_traj trajectories.
@@ -220,13 +220,13 @@ class RolloutWorker:
         while n_steps_total < max_samples and n_trajs < max_trajs:
             self.env.reset_task(task)
             self.env.set_meta_mode(train_test)
-            path = self.rollout(deterministic=deterministic, max_path_length=self.max_path_length if max_samples - n_steps_total > self.max_path_length else max_samples - n_steps_total, animated=animated, save_frames=save_frames)
+            path = self.rollout(deterministic=deterministic, max_path_length=self.max_path_length if max_samples - n_steps_total > self.max_path_length else max_samples - n_steps_total, animated=animated, save_frames=save_frames, return_distributions=return_distributions)
             paths.append(path)
             n_steps_total += len(path['observations'])
             n_trajs += 1
         return paths, n_steps_total
 
-    def rollout(self, deterministic=False, max_path_length=np.inf, animated=False, save_frames=False):
+    def rollout(self, deterministic=False, max_path_length=np.inf, animated=False, save_frames=False, return_distributions=False):
 
         observations = []
         task_indicators = []
@@ -258,10 +258,11 @@ class RolloutWorker:
                           / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
             else:
                 o_input = o
-            out = self.agent.get_action(agent_input, o_input, deterministic=deterministic, z_debug=None, env=self.env)
-            a, agent_info = out[0]
-            task_indicator = out[1]
-            base_task_indicator = out[2]
+            out = self.agent.get_action(agent_input, o_input, deterministic=deterministic, z_debug=None, env=self.env, return_distributions=return_distributions)
+            a = out[0]
+            agent_info = out[1]
+            task_indicator = out[2]
+            base_task_indicator = out[3]
             next_o, r, d, env_info = self.env.step(a)
             self.update_context(o, a, np.array([r], dtype=np.float32), next_o)
             if self.scripted_policy:
@@ -294,7 +295,7 @@ class RolloutWorker:
                       / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
         else:
             next_o_input = next_o
-        _, next_task_indicator, next_base_task_indicator = \
+        _, _, next_task_indicator, next_base_task_indicator, *_ = \
             self.agent.get_action(agent_input, next_o_input, deterministic=deterministic, env=self.env)
         actions = np.array(actions)
         if len(actions.shape) == 1:

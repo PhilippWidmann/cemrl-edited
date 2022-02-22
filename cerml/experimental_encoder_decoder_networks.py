@@ -33,8 +33,8 @@ class NoActionEncoder(Encoder):
         else:
             raise ValueError(f'Unexpected input dimension {x.shape[-1]}')
 
-    def forward(self, x):
-        return super().forward(self.exclude_actions(x))
+    def forward(self, x, return_distributions=False):
+        return super().forward(self.exclude_actions(x), return_distributions=return_distributions)
 
     def encode(self, x):
         return super().encode(self.exclude_actions(x))
@@ -72,8 +72,8 @@ class SpecialOmissionEncoder(Encoder):
         else:
             raise ValueError(f'Unexpected input dimension {x.shape[-1]}')
 
-    def forward(self, x):
-        return super().forward(self.exclude_indices(x))
+    def forward(self, x, return_distributions=False):
+        return super().forward(self.exclude_indices(x), return_distributions=return_distributions)
 
     def encode(self, x):
         return super().encode(self.exclude_indices(x))
@@ -84,7 +84,7 @@ class NoOpEncoder(nn.Module):
         super().__init__()
         self.latent_dim = 1
 
-    def forward(self, x):
+    def forward(self, x, return_distributions=False):
         if len(x.shape) == 2:
             return torch.zeros((1, self.latent_dim), device=x.device), \
                    torch.zeros(1, device=x.device)

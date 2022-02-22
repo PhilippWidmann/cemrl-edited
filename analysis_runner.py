@@ -74,8 +74,21 @@ def analysis(variant):
     results_dict = {}
     for example_case in example_cases:
         results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
-                deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False)
+                deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True)
         results_dict[example_case] = results[0][0][0][0]
+
+    if False:
+        plt.plot(list(range(200)), results_dict[7]['task_indicators'][:, 0])
+        plt.suptitle('task indicators')
+        plt.show()
+        for i in range(20):
+            plt.plot(list(range(200)), results_dict[7]['observations'][:, i])
+            plt.suptitle(f'Observation {i}')
+            plt.show()
+        for i in range(6):
+            plt.plot(list(range(200)), results_dict[7]['actions'][:, i])
+            plt.suptitle(f'Actions {i}')
+            plt.show()
 
     for plot_spec in variant['analysis_params']['single_episode_plots']:
         plot_spec_dict = get_plot_specification(plot_spec)
@@ -83,7 +96,7 @@ def analysis(variant):
             fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
             for i, ax in enumerate(axes.flat):
                 p = plot_spec_dict[i]
-                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
+                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
 
             fig.tight_layout()
             all_figures.append((fig, axes))
@@ -103,7 +116,7 @@ def analysis(variant):
         for example_case in example_cases:
             for i, ax in enumerate(axes.flat):
                 p = plot_spec_dict[i]
-                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['x'], fig_ax=(fig, ax))
+                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
 
         fig.tight_layout()
         all_figures.append((fig, axes))
