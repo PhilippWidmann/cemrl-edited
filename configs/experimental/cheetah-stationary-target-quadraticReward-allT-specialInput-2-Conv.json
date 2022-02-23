@@ -18,7 +18,7 @@
         "use_combination_trainer": false,
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
-        "encoder_type": "TimestepMLP",
+        "encoder_type": "Conv",
         "encoder_omit_input": [26, 35],
         "use_fixed_seeding": true,
         "seed": 0,

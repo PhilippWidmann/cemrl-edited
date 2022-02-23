@@ -12,7 +12,7 @@
         "task_max_target": 25.0,
         "change_point_interval": 1,
         "state_reconstruction_clip": 8,
-        "use_state_decoder": false
+        "use_state_decoder": true
     },
     "algo_params": {
         "use_combination_trainer": false,
@@ -55,12 +55,12 @@
         "reconstruct_all_timesteps": true,
         "prior_mode": "fixedOnY",
         "prior_sigma": 0.5,
-        "num_classes": 1,
+        "num_classes": 2,
         "lr_encoder": 0.0003,
         "lr_decoder": 0.0003,
         "alpha_kl_z": 0.001,
         "beta_kl_y": 0.001,
-        "net_complex_enc_dec": 10.0,
+        "net_complex_enc_dec": 30.0,
         "factor_qf_loss": 1.0,
         "train_val_percent": 0.8,
         "eval_interval": 50,
