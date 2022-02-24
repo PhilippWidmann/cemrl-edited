@@ -4,7 +4,9 @@ from meta_rand_envs.half_cheetah_non_stationary_target import HalfCheetahNonStat
     ObservableDistToGoalHalfCheetahNonStationaryTargetNormalizedRewardEnv, \
     ObservableRewardHalfCheetahNonStationaryTargetNormalizedRewardEnv, \
     ObservableDirToGoalHalfCheetahNonStationaryTargetNormalizedRewardEnv, \
-    ObservableGoalHalfCheetahNonStationaryTargetEnv, HalfCheetahNonStationaryTargetQuadraticRewardEnv
+    ObservableGoalHalfCheetahNonStationaryTargetEnv, HalfCheetahNonStationaryTargetQuadraticRewardEnv, \
+    HalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv, \
+    ObservableHalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv
 from . import register_env
 
 
@@ -43,6 +45,19 @@ class HalfCheetahNonStationaryTargetQuadraticRewardWrappedEnv(HalfCheetahNonStat
 class HalfCheetahNonStationaryTargetNormalizedRewardWrappedEnv(HalfCheetahNonStationaryTargetNormalizedRewardEnv):
     def __init__(self, *args, **kwargs):
         HalfCheetahNonStationaryTargetNormalizedRewardEnv.__init__(self, *args, **kwargs)
+
+
+@register_env('cheetah-stationary-targetVarStart-quadraticReward')
+@register_env('cheetah-stationary-targetVarStart-quadraticReward-specialInput')
+class HalfCheetahNonStationaryTargetVariableStartWrappedEnv(HalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+
+
+@register_env('observable-cheetah-stationary-targetVarStart-quadraticReward')
+class ObservableHalfCheetahNonStationaryTargetVariableStartWrappedEnv(ObservableHalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
 
 
 @register_env('cheetah-stationary-target-observable-goal')

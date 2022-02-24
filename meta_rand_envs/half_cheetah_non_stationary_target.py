@@ -103,6 +103,43 @@ class HalfCheetahNonStationaryTargetQuadraticRewardEnv(HalfCheetahNonStationaryT
         return reward, reward_ctrl, reward_run
 
 
+class HalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv(HalfCheetahNonStationaryTargetQuadraticRewardEnv):
+    def __init__(self, *args, **kwargs):
+        self.possible_start_positions = kwargs['start_positions']
+        self.active_start_position = None
+        super().__init__(*args, **kwargs)
+
+    def reset_model(self):
+        qpos = self.init_qpos
+        qpos[0] = self.active_start_position
+        qpos = qpos + self.np_random.uniform(low=-.1, high=.1, size=self.model.nq)
+        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * .1
+        self.set_state(qpos, qvel)
+        return self._get_obs()
+
+    def sample_tasks(self, num_tasks):
+        np.random.seed(1337)
+        targets = np.random.uniform(self.task_min_target, self.task_max_target, size=(num_tasks,))
+        starts = np.random.choice(self.possible_start_positions, size=num_tasks, replace=True)
+        tasks = [{'target': targets[i], 'start': starts[i]} for i in range(num_tasks)]
+        return tasks
+
+    def reset_task(self, idx):
+        self.active_start_position = self.tasks[idx]['start']
+        super().reset_task(idx)
+
+
+class ObservableHalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv(HalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv):
+    def _get_obs(self):
+        return np.concatenate([
+            self.sim.data.qpos.flat[1:],
+            self.get_body_com("torso").flat,
+            self.sim.data.qvel.flat,
+            np.array([self.active_task]),
+            np.array([self.active_start_position])
+        ]).astype(np.float32).flatten()
+
+
 class ObservableGoalHalfCheetahNonStationaryTargetNormalizedRewardEnv(HalfCheetahNonStationaryTargetNormalizedRewardEnv):
     def _get_obs(self):
         return np.concatenate([
