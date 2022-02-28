@@ -86,11 +86,17 @@ class NoOpEncoder(nn.Module):
 
     def forward(self, x, return_distributions=False):
         if len(x.shape) == 2:
-            return torch.zeros((1, self.latent_dim), device=x.device), \
-                   torch.zeros(1, device=x.device)
+            first_dim = 1
         else:
-            return torch.zeros((x.shape[0], self.latent_dim), device=x.device), \
-                   torch.zeros(x.shape[0], device=x.device)
+            first_dim = x.shape[0]
+        if return_distributions:
+            return torch.zeros((first_dim, self.latent_dim), device=x.device), \
+                   torch.zeros(first_dim, device=x.device), \
+                   None
+        else:
+            return torch.zeros((first_dim, self.latent_dim), device=x.device), \
+                   torch.zeros(first_dim, device=x.device)
+
 
     def encode(self, x):
         raise NotImplementedError('encode should not be called on NoOpEncoder')

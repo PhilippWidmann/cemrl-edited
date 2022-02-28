@@ -1,9 +1,9 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='./output/cheetah-stationary-target-quadraticReward-specialInput/2022_02_22_01_40_07',  # CONFIGURE! path to experiment folder
-    save_dir='./output_analysis/cheetah-stationary-target-quadraticReward-specialInput/2022_02_22_01_40_07',
+    path_to_weights='./output/observable-cheetah-stationary-targetVarStart-quadraticReward/2022_02_25_14_27_56',  # CONFIGURE! path to experiment folder
+    save_dir='./output_analysis/observable-cheetah-stationary-targetVarStart-quadraticReward/2022_02_25_14_27_56',
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
-    showcase_itr=[0, 25, 50, 75, 100, 400, 425, 450, 475, 500],  # CONFIGURE! epoch for which analysis is performed
+    showcase_itr=[0, 25, 50, 75, 100, 125, 150, 175, 200, 300, 400, 425, 450, 475, 500],  # CONFIGURE! epoch for which analysis is performed
     util_params=dict(
         base_log_dir='.temp',  # name of output directory
         use_gpu=True,  # set True if GPU available and should be used
@@ -15,10 +15,9 @@ analysis_config = dict(
     ),
     analysis_params=dict(
         train_example_cases=[],
-        example_cases=[6, 7, 8, 9, 24, ],  # CONFIGURE! choose an array of test tasks
+        example_cases=[9, 3, 7, 1, 14, 15], #[6, 7, 8, 9, 24, ],  # CONFIGURE! choose an array of test tasks
         single_episode_plots=[],
-        multiple_episode_plots=[['time_vs_task_indicators', 'time_vs_rewards', 'time_vs_pos_const_specification'],
-                                ['time_vs_task_indicators_fill_z_stds', 'time_vs_rewards', 'time_vs_pos_const_specification'],],
+        multiple_episode_plots=[['time_vs_task_indicators', 'time_vs_rewards', 'time_vs_pos_const_specification'],],
         log_and_plot_progress=False,  # CONFIGURE! If True: experiment will be logged to the experiment_database.json and plotted, If already logged: plot only
         save=True,  # CONFIGURE! If True: plots of following options will be saved to the experiment folder
         show=False,
