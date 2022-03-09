@@ -123,6 +123,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         net_complex_enc_dec,
         variant['env_params']['state_reconstruction_clip'],
         variant['env_params']['use_state_decoder'],
+        variant['reconstruction_params']['use_next_state_for_reward_decoder'],
     )
 
     prior_pz = PriorPz(num_classes, latent_dim)

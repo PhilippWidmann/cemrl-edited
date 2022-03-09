@@ -72,6 +72,7 @@ default_config = dict(
 
     reconstruction_params=dict(
         use_state_diff=False,  # determines if decoder uses state or state difference as target
+        use_next_state_for_reward_decoder=True,  # whether next_state is part of the reward decoder input
         reconstruct_all_timesteps=True,
         component_constraint_learning=False,  # enables providing base class information to the class encoder
         prior_mode='fixedOnY',  # options: 'fixedOnY' and 'network, determine if prior comes from a linear layer or is fixed on y

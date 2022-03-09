@@ -203,13 +203,17 @@ class DecoderMDP(nn.Module):
                  z_dim,
                  net_complex,
                  state_reconstruction_clip,
-                 use_state_decoder):
+                 use_state_decoder,
+                 use_next_state_for_reward=False):
         super(DecoderMDP, self).__init__()
 
         self.state_decoder_input_size = state_dim + action_dim + z_dim
         self.state_decoder_hidden_size = int(self.state_decoder_input_size * net_complex)
-
+        
+        self.use_next_state_for_reward = use_next_state_for_reward
         self.reward_decoder_input_size = state_dim + action_dim + z_dim
+        if self.use_next_state_for_reward:
+            self.reward_decoder_input_size = self.reward_decoder_input_size + state_dim
         self.reward_decoder_hidden_size = int(self.reward_decoder_input_size * net_complex)
         self.state_reconstruction_clip = state_reconstruction_clip
         self.use_state_decoder = use_state_decoder
@@ -230,11 +234,14 @@ class DecoderMDP(nn.Module):
         )
 
     def forward(self, state, action, next_state, z):
-        # Todo: next_state unused. Is this intentional?
         if self.use_state_decoder:
             state_estimate = self.net_state_decoder(torch.cat([state, action, z], dim=-1))
         else:
             state_estimate = None
-        reward_estimate = self.net_reward_decoder(torch.cat([state, action, z], dim=-1))
+            
+        if self.use_next_state_for_reward:
+            reward_estimate = self.net_reward_decoder(torch.cat([state, action, next_state, z], dim=-1))
+        else:
+            reward_estimate = self.net_reward_decoder(torch.cat([state, action, z], dim=-1))
 
         return state_estimate, reward_estimate
