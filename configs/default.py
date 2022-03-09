@@ -71,6 +71,7 @@ default_config = dict(
     ),
 
     reconstruction_params=dict(
+        reconstruction_model='VAE',
         use_state_diff=False,  # determines if decoder uses state or state difference as target
         use_next_state_for_reward_decoder=True,  # whether next_state is part of the reward decoder input
         reconstruct_all_timesteps=True,

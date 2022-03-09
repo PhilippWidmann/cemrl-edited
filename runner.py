@@ -8,6 +8,7 @@ import torch
 import gym
 
 from cerml.debug_encoding import EncodingDebugger
+from cerml.optimization_based_encoding import OptimizationReconstructionTrainer, OptimizationEncoder
 
 gym.logger.set_level(40)
 
@@ -81,52 +82,157 @@ def initialize_networks(variant, env, experiment_log_dir):
     time_steps = variant['algo_params']['time_steps']
     num_classes = variant['reconstruction_params']['num_classes']
 
-    # encoder used: single transitions or trajectories
-    if variant['algo_params']['encoder_type'] == 'NoEncoder':
-        # debug case: completely omit any encoding and only do SAC training
-        encoder_class = NoOpEncoder
-    elif variant['algo_params']['encoder_omit_input'] == 'action':
-        encoder_class = NoActionEncoder
-    elif variant['algo_params']['encoder_omit_input'] == 'special':
-        encoder_class = SpecialOmissionEncoder
-        variant['algo_params']['encoder_omit_input'] = None
-    elif isinstance(variant['algo_params']['encoder_omit_input'], list):
-        encoder_class = SpecialOmissionEncoder
-    else:
-        encoder_class = Encoder
-        variant['algo_params']['encoder_omit_input'] = None
-
-    encoder = encoder_class(
-        obs_dim,
-        action_dim,
-        reward_dim,
-        net_complex_enc_dec,
-        variant['algo_params']['encoder_type'],
-        latent_dim,
-        variant['algo_params']['batch_size_reconstruction'],
-        num_classes,
+    replay_buffer = StackedReplayBuffer(
+        variant['algo_params']['max_replay_buffer_size'],
         time_steps,
-        variant['algo_params']['encoder_merge_mode'],
-        relevant_input_indices=variant['algo_params']['encoder_omit_input']
-    )
-
-    if variant['algo_params']['decoder_omit_input'] == 'special':
-        decoder_class = SpecialOmissionDecoder
-    else:
-        decoder_class = DecoderMDP
-
-    decoder = decoder_class(
-        action_dim,
         obs_dim,
-        reward_dim,
+        action_dim,
         latent_dim,
-        net_complex_enc_dec,
-        variant['env_params']['state_reconstruction_clip'],
-        variant['env_params']['use_state_decoder'],
-        variant['reconstruction_params']['use_next_state_for_reward_decoder'],
+        variant['algo_params']['permute_samples'],
+        variant['algo_params']['sampling_mode']
     )
 
-    prior_pz = PriorPz(num_classes, latent_dim)
+    if variant['reconstruction_params']['reconstruction_model'] == 'VAE':
+        # encoder used: single transitions or trajectories
+        if variant['algo_params']['encoder_type'] == 'NoEncoder':
+            # debug case: completely omit any encoding and only do SAC training
+            encoder_class = NoOpEncoder
+        elif variant['algo_params']['encoder_omit_input'] == 'action':
+            encoder_class = NoActionEncoder
+        elif variant['algo_params']['encoder_omit_input'] == 'special':
+            encoder_class = SpecialOmissionEncoder
+            variant['algo_params']['encoder_omit_input'] = None
+        elif isinstance(variant['algo_params']['encoder_omit_input'], list):
+            encoder_class = SpecialOmissionEncoder
+        else:
+            encoder_class = Encoder
+            variant['algo_params']['encoder_omit_input'] = None
+
+        encoder = encoder_class(
+            obs_dim,
+            action_dim,
+            reward_dim,
+            net_complex_enc_dec,
+            variant['algo_params']['encoder_type'],
+            latent_dim,
+            variant['algo_params']['batch_size_reconstruction'],
+            num_classes,
+            time_steps,
+            variant['algo_params']['encoder_merge_mode'],
+            relevant_input_indices=variant['algo_params']['encoder_omit_input']
+        )
+
+        if variant['algo_params']['decoder_omit_input'] == 'special':
+            decoder_class = SpecialOmissionDecoder
+        else:
+            decoder_class = DecoderMDP
+
+        decoder = decoder_class(
+            action_dim,
+            obs_dim,
+            reward_dim,
+            latent_dim,
+            net_complex_enc_dec,
+            variant['env_params']['state_reconstruction_clip'],
+            variant['env_params']['use_state_decoder'],
+            variant['reconstruction_params']['use_next_state_for_reward_decoder'],
+        )
+
+        prior_pz = PriorPz(num_classes, latent_dim)
+
+        # ReconstructionTrainer
+        reconstruction_trainer = ReconstructionTrainer(
+            encoder,
+            decoder,
+            prior_pz,
+            replay_buffer,
+            variant['algo_params']['batch_size_reconstruction'],
+            variant['algo_params']['batch_size_validation'],
+            num_classes,
+            latent_dim,
+            time_steps,
+            variant['reconstruction_params']['lr_decoder'],
+            variant['reconstruction_params']['lr_encoder'],
+            variant['reconstruction_params']['alpha_kl_z'],
+            variant['reconstruction_params']['beta_kl_y'],
+            variant['reconstruction_params']['use_state_diff'],
+            variant['reconstruction_params']['component_constraint_learning'],
+            variant['env_params']['state_reconstruction_clip'],
+            variant['env_params']['use_state_decoder'],
+            variant['algo_params']['use_data_normalization'],
+            variant['reconstruction_params']['train_val_percent'],
+            variant['reconstruction_params']['eval_interval'],
+            variant['reconstruction_params']['early_stopping_threshold'],
+            experiment_log_dir,
+            variant['util_params']['temp_dir'],
+            variant['reconstruction_params']['prior_mode'],
+            variant['reconstruction_params']['prior_sigma'],
+            variant['algo_params']['data_usage_reconstruction'],
+            variant['reconstruction_params']['reconstruct_all_timesteps']
+        )
+        if variant['algo_params']['encoder_type'] == 'NoEncoder':
+            # debug case: completely omit any encoding and only do SAC training
+            reconstruction_trainer = NoOpReconstructionTrainer()
+    elif variant['reconstruction_params']['reconstruction_model'] == 'Optimization':
+        decoder = DecoderMDP(
+            action_dim,
+            obs_dim,
+            reward_dim,
+            latent_dim,
+            net_complex_enc_dec,
+            variant['env_params']['state_reconstruction_clip'],
+            variant['env_params']['use_state_decoder'],
+            variant['reconstruction_params']['use_next_state_for_reward_decoder'],
+        )
+        encoder = OptimizationEncoder(
+            decoder,
+            obs_dim,
+            action_dim,
+            reward_dim,
+            latent_dim,
+            variant['algo_params']['batch_size_reconstruction'],
+            num_classes,
+            time_steps,
+            variant['reconstruction_params']['lr_encoder'],
+            variant['reconstruction_params']['reconstruct_all_timesteps'],
+            variant['env_params']['state_reconstruction_clip'],
+        )
+        prior_pz = PriorPz(num_classes, latent_dim)
+        # ReconstructionTrainer
+        reconstruction_trainer = OptimizationReconstructionTrainer(
+            encoder,
+            decoder,
+            prior_pz,
+            replay_buffer,
+            variant['algo_params']['batch_size_reconstruction'],
+            variant['algo_params']['batch_size_validation'],
+            num_classes,
+            latent_dim,
+            time_steps,
+            variant['reconstruction_params']['lr_decoder'],
+            variant['reconstruction_params']['lr_encoder'],
+            variant['reconstruction_params']['alpha_kl_z'],
+            variant['reconstruction_params']['beta_kl_y'],
+            variant['reconstruction_params']['use_state_diff'],
+            variant['reconstruction_params']['component_constraint_learning'],
+            variant['env_params']['state_reconstruction_clip'],
+            variant['env_params']['use_state_decoder'],
+            variant['algo_params']['use_data_normalization'],
+            variant['reconstruction_params']['train_val_percent'],
+            variant['reconstruction_params']['eval_interval'],
+            variant['reconstruction_params']['early_stopping_threshold'],
+            experiment_log_dir,
+            variant['util_params']['temp_dir'],
+            variant['reconstruction_params']['prior_mode'],
+            variant['reconstruction_params']['prior_sigma'],
+            variant['algo_params']['data_usage_reconstruction'],
+            variant['reconstruction_params']['reconstruct_all_timesteps']
+        )
+        if variant['algo_params']['encoder_type'] == 'NoEncoder':
+            # debug case: completely omit any encoding and only do SAC training
+            reconstruction_trainer = NoOpReconstructionTrainer()
+    else:
+        raise ValueError('model_structure must be one of [VAE, optimization]')
 
     if variant['algo_params']['policy_mode'] == 'sac_single':
         policy_networks = SingleSAC(
@@ -152,16 +258,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         'decoder': decoder,
         **policy_networks.get_networks()
     }
-
-    replay_buffer = StackedReplayBuffer(
-        variant['algo_params']['max_replay_buffer_size'],
-        time_steps,
-        obs_dim,
-        action_dim,
-        latent_dim,
-        variant['algo_params']['permute_samples'],
-        variant['algo_params']['sampling_mode']
-    )
 
     # Agent
     agent_class = ScriptedPolicyAgent if variant['env_params']['scripted_policy'] else CEMRLAgent
@@ -190,40 +286,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['util_params']['gpu_id'],
         variant['env_params']['scripted_policy']
     )
-
-    # ReconstructionTrainer
-    reconstruction_trainer = ReconstructionTrainer(
-        encoder,
-        decoder,
-        prior_pz,
-        replay_buffer,
-        variant['algo_params']['batch_size_reconstruction'],
-        variant['algo_params']['batch_size_validation'],
-        num_classes,
-        latent_dim,
-        time_steps,
-        variant['reconstruction_params']['lr_decoder'],
-        variant['reconstruction_params']['lr_encoder'],
-        variant['reconstruction_params']['alpha_kl_z'],
-        variant['reconstruction_params']['beta_kl_y'],
-        variant['reconstruction_params']['use_state_diff'],
-        variant['reconstruction_params']['component_constraint_learning'],
-        variant['env_params']['state_reconstruction_clip'],
-        variant['env_params']['use_state_decoder'],
-        variant['algo_params']['use_data_normalization'],
-        variant['reconstruction_params']['train_val_percent'],
-        variant['reconstruction_params']['eval_interval'],
-        variant['reconstruction_params']['early_stopping_threshold'],
-        experiment_log_dir,
-        variant['util_params']['temp_dir'],
-        variant['reconstruction_params']['prior_mode'],
-        variant['reconstruction_params']['prior_sigma'],
-        variant['algo_params']['data_usage_reconstruction'],
-        variant['reconstruction_params']['reconstruct_all_timesteps']
-    )
-    if variant['algo_params']['encoder_type'] == 'NoEncoder':
-        # debug case: completely omit any encoding and only do SAC training
-        reconstruction_trainer = NoOpReconstructionTrainer()
 
     # PolicyTrainer
     policy_trainer = PolicyTrainer(
@@ -379,7 +441,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/experimental/cheetah-stationary-target-quadraticReward-allT-specialInput-2.json")
+@click.argument('config', default="configs/optim_encoding/cheetah-stationary-vel-optim.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)

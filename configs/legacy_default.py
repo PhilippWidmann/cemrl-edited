@@ -71,6 +71,7 @@ legacy_default_config = dict(
     ),
 
     reconstruction_params=dict(
+        reconstruction_model='VAE',
         use_state_diff=False,  # determines if decoder uses state or state difference as target
         use_next_state_for_reward_decoder=False,
         reconstruct_all_timesteps=False,
