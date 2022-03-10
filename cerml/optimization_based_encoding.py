@@ -82,9 +82,9 @@ class OptimizationEncoder(nn.Module):
         for i in range(self.z_update_steps):
             z_rep = z.unsqueeze(dim=1).repeat([1, self.time_steps, 1])
             next_state_pred, reward_pred = self.decoder(state, action, next_state, z_rep)
-            loss = F.mse_loss(reward_pred, reward, reduction='mean')
+            loss = F.mse_loss(reward_pred, reward, reduction='sum')
             if next_state_pred is not None:
-                loss += F.mse_loss(next_state_pred, next_state[..., :self.state_reconstruction_clip], reduction='mean')
+                loss += F.mse_loss(next_state_pred, next_state[..., :self.state_reconstruction_clip], reduction='sum')
 
             task_gradients = torch.autograd.grad(loss, z, create_graph=not self.first_order)[0]
             z = z - self.lr_encoder * task_gradients
