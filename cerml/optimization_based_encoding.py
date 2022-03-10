@@ -25,7 +25,8 @@ class OptimizationEncoder(nn.Module):
             lr_encoder,
             reconstruct_all_steps,
             state_reconstruction_clip,
-            z_update_steps=5,
+            first_order,
+            z_update_steps,
             optimizer_class=optim.Adam,
             **kwargs
     ):
@@ -39,6 +40,7 @@ class OptimizationEncoder(nn.Module):
         self.batch_size = batch_size
         self.time_steps = time_steps
         self.num_classes = num_classes
+        self.first_order = first_order
         self.z_update_steps = z_update_steps
         self.lr_encoder = lr_encoder
         self.reconstruct_all_steps = reconstruct_all_steps
@@ -75,21 +77,20 @@ class OptimizationEncoder(nn.Module):
         z = torch.zeros((x.shape[0], self.latent_dim),
                         device=x.device,
                         requires_grad=True)
-        optimizer = self.optimizer_class([z], self.lr_encoder)
 
-        self._set_decoder_requires_grad(False)
+        #self._set_decoder_requires_grad(False)
         for i in range(self.z_update_steps):
-            optimizer.zero_grad()
             z_rep = z.unsqueeze(dim=1).repeat([1, self.time_steps, 1])
             next_state_pred, reward_pred = self.decoder(state, action, next_state, z_rep)
             loss = F.mse_loss(reward_pred, reward, reduction='mean')
             if next_state_pred is not None:
                 loss += F.mse_loss(next_state_pred, next_state[..., :self.state_reconstruction_clip], reduction='mean')
-            loss.backward()
-            optimizer.step()
-        self._set_decoder_requires_grad(True)
 
-        z.requires_grad = False
+            task_gradients = torch.autograd.grad(loss, z, create_graph=not self.first_order)[0]
+            z = z - self.lr_encoder * task_gradients
+        #self._set_decoder_requires_grad(True)
+
+        #z.requires_grad = False
         return z, torch.zeros(self.batch_size, device=x.device)
 
     def _set_decoder_requires_grad(self, requires_grad):

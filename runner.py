@@ -196,6 +196,8 @@ def initialize_networks(variant, env, experiment_log_dir):
             variant['reconstruction_params']['lr_encoder'],
             variant['reconstruction_params']['reconstruct_all_timesteps'],
             variant['env_params']['state_reconstruction_clip'],
+            variant['reconstruction_params']['optim_first_order'],
+            variant['reconstruction_params']['optim_z_update_steps'],
         )
         prior_pz = PriorPz(num_classes, latent_dim)
         # ReconstructionTrainer

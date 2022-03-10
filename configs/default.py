@@ -88,5 +88,7 @@ default_config = dict(
         train_val_percent=0.8,  # percentage of train samples vs. validation samples
         eval_interval=50,  # interval for evaluation with validation data and possible early stopping
         early_stopping_threshold=500,  # minimal epochs before early stopping after new minimum was found
+        optim_first_order=False,
+        optim_z_update_steps=1
     )
 )

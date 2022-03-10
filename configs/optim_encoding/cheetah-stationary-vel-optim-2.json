@@ -50,7 +50,7 @@
     "reconstruction_params": {
         "reconstruction_model": "Optimization",
         "optim_first_order": false,
-        "optim_z_update_steps": 1,
+        "optim_z_update_steps": 5,
         "use_next_state_for_reward_decoder": true,
         "use_state_diff": false,
         "component_constraint_learning": false,
