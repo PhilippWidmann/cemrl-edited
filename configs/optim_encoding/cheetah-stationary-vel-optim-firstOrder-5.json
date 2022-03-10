@@ -1,5 +1,5 @@
 {
-    "env_name": "cheetah-stationary-vel-optim",
+    "env_name": "cheetah-stationary-vel-optim-firstOrder",
     "env_params": {
         "n_train_tasks": 30,
         "n_eval_tasks": 30,
@@ -49,8 +49,8 @@
     },
     "reconstruction_params": {
         "reconstruction_model": "Optimization",
-        "optim_first_order": false,
-        "optim_z_update_steps": 1,
+        "optim_first_order": true,
+        "optim_z_update_steps": 5,
         "use_next_state_for_reward_decoder": true,
         "use_state_diff": false,
         "component_constraint_learning": false,

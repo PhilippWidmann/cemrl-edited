@@ -1,8 +1,8 @@
 {
-    "env_name": "cheetah-stationary-vel",
+    "env_name": "cheetah-stationary-vel-optim-firstOrder",
     "env_params": {
-        "n_train_tasks": 20,
-        "n_eval_tasks": 20,
+        "n_train_tasks": 30,
+        "n_eval_tasks": 30,
         "use_normalized_env": true,
         "change_mode": "location",
         "termination_possible": false,
@@ -50,14 +50,14 @@
     "reconstruction_params": {
         "reconstruction_model": "Optimization",
         "optim_first_order": true,
-        "optim_z_update_steps": 5,
+        "optim_z_update_steps": 1,
         "use_next_state_for_reward_decoder": true,
         "use_state_diff": false,
         "component_constraint_learning": false,
         "prior_mode": "fixedOnY",
         "prior_sigma": 0.5,
         "num_classes": 1,
-        "lr_encoder": 1,
+        "lr_encoder": 0.01,
         "lr_decoder": 0.0003,
         "alpha_kl_z": 0.001,
         "beta_kl_y": 0.001,

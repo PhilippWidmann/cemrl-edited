@@ -6,6 +6,8 @@ from meta_rand_envs.experimental_half_cheetah_non_stationary_velocity import Hal
 
 
 @register_env('cheetah-stationary-vel')
+@register_env('cheetah-stationary-vel-optim')
+@register_env('cheetah-stationary-vel-optim-firstOrder')
 @register_env('cheetah-stationary-vel-oneTimestep')
 @register_env('cheetah-non-stationary-vel')
 class HalfCheetahNonStationaryVelWrappedEnv(HalfCheetahNonStationaryVelocityEnv):
