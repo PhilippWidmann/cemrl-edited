@@ -150,10 +150,10 @@ class PolicyTrainer:
         # get data from replay buffer
         if step == 0:
             gt.stamp('pt_before_sample')
-        batch_enc, batch = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size,
-                                                                           normalize=self.use_data_normalization,
-                                                                           normalize_sac=self.use_sac_data_normalization,
-                                                                           return_sac_data=True)
+        batch_enc, batch = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size,
+                                                                                normalize=self.use_data_normalization,
+                                                                                normalize_sac=self.use_sac_data_normalization,
+                                                                                return_sac_data=True)
         if step == 0:
             gt.stamp('pt_sample')
 

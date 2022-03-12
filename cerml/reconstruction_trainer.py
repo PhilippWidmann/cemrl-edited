@@ -207,7 +207,7 @@ class ReconstructionTrainer(nn.Module):
 
         # get data from replay buffer
         # TODO: for validation data use all data --> batch size == validation size
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=self.use_data_normalization)
+        data = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size, normalize=self.use_data_normalization)
 
         # prepare for usage in encoder
         encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
@@ -330,7 +330,7 @@ class ReconstructionTrainer(nn.Module):
     def validate(self, indices):
         with torch.no_grad():
             # get data from replay buffer
-            data = self.replay_buffer.sample_random_few_step_batch(indices, self.validation_batch_size, normalize=self.use_data_normalization)
+            data = self.replay_buffer.sample_random_few_step_data_batch(indices, self.validation_batch_size, normalize=self.use_data_normalization)
 
             # prepare for usage in encoder
             encoder_input = self.replay_buffer.make_encoder_data(data, self.validation_batch_size)

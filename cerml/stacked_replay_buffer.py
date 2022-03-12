@@ -109,22 +109,7 @@ class StackedReplayBuffer:
     def get_allowed_points(self):
         return np.where(self._allowed_points)[0]
 
-    def sample_data(self, indices):
-        return dict(
-            observations=self._observations[indices],
-            next_observations=self._next_obs[indices],
-            actions=self._actions[indices],
-            rewards=self._rewards[indices],
-            task_indicators=self._task_indicators[indices],
-            base_task_indicators=self._base_task_indicators[indices],
-            next_task_indicators=self._next_task_indicators[indices],
-            next_base_task_indicators=self._next_base_task_indicators[indices],
-            sparse_rewards=self._sparse_rewards[indices],
-            terminals=self._terminals[indices],
-            true_tasks=self._true_task[indices]
-        )
-
-    def get_indices(self, points, batch_size, prio=None):
+    def sample_indices(self, points, batch_size, prio=None):
         rng = np.random.default_rng()
         prio = self.sampling_mode if prio is None else prio
 
@@ -140,20 +125,29 @@ class StackedReplayBuffer:
 
         return indices
 
-    # Single transition sample functions
-    def sample_random_batch(self, indices, batch_size, prio=None):
-        ''' batch of unordered transitions '''
-        indices = self.get_indices(indices, batch_size, prio=prio)
-        return self.sample_data(indices)
+    def get_data_batch(self, indices):
+        return dict(
+            observations=self._observations[indices],
+            next_observations=self._next_obs[indices],
+            actions=self._actions[indices],
+            rewards=self._rewards[indices],
+            task_indicators=self._task_indicators[indices],
+            base_task_indicators=self._base_task_indicators[indices],
+            next_task_indicators=self._next_task_indicators[indices],
+            next_base_task_indicators=self._next_base_task_indicators[indices],
+            sparse_rewards=self._sparse_rewards[indices],
+            terminals=self._terminals[indices],
+            true_tasks=self._true_task[indices]
+        )
 
     # Sequence sample functions
-    def sample_few_step_batch(self, points, batch_size, normalize=True):
+    def get_few_step_data_batch(self, points, batch_size, normalize=True):
         # the points in time together with their <time_step> many entries from before are sampled
         # check if the current point is still in the same 'episode' else take episode start
         all_indices = points[:, None] + np.arange(-self.time_steps, 1)[None, :]
         match_map = (self._first_timestep[all_indices] != self._first_timestep[points][:, None])
 
-        data = self.sample_data(all_indices)
+        data = self.get_data_batch(all_indices)
 
         if normalize:
             data = self.normalize_data(data)
@@ -176,20 +170,16 @@ class StackedReplayBuffer:
 
         return data
 
-    def sample_random_few_step_batch(self, points, batch_size, normalize=True, normalize_sac=False, prio=None, return_sac_data=False):
+    def sample_random_few_step_data_batch(self, points, batch_size, normalize=True, normalize_sac=False, prio=None, return_sac_data=False):
         ''' batch of unordered small sequences of transitions '''
-        indices = self.get_indices(points, batch_size, prio=prio)
+        indices = self.sample_indices(points, batch_size, prio=prio)
         if not return_sac_data:
-            return self.sample_few_step_batch(indices, batch_size, normalize=normalize)
+            return self.get_few_step_data_batch(indices, batch_size, normalize=normalize)
         else:
-            sac_data = self.sample_data(indices)
+            sac_data = self.get_data_batch(indices)
             if normalize_sac:
                 sac_data = self.normalize_data(sac_data)
-            return self.sample_few_step_batch(indices, batch_size, normalize=normalize), sac_data
-
-    def sample_relabeler_data_batch(self, start, batch_size):
-        points = self._allowed_points[start:start+batch_size]
-        return self.sample_few_step_batch(points, batch_size)
+            return self.get_few_step_data_batch(indices, batch_size, normalize=normalize), sac_data
 
     # Relabeler util function
     def relabel_z(self, start, batch_size, z, next_z, y, next_y):

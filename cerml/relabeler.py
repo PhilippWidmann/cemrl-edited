@@ -30,7 +30,7 @@ class Relabeler:
                 else:
                     batch_size = self.batch_size_relabel
                 points = all_points[start:start + batch_size]
-                data = self.replay_buffer.sample_few_step_batch(points, batch_size, normalize=self.normalize)
+                data = self.replay_buffer.get_few_step_data_batch(points, batch_size, normalize=self.normalize)
                 encoder_input = self.replay_buffer.make_encoder_data(data, batch_size)
                 z, y = self.encoder(encoder_input)
 

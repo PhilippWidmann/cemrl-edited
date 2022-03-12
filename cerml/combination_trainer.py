@@ -337,7 +337,7 @@ class CombinationTrainer:
         '''
         # get data from replay buffer
         # TODO: for validation data use all data --> batch size == validation size
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=False)
+        data = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size, normalize=False)
         #data = self.replay_buffer.sample_random_few_step_batch(np.array([3,4,5,6]), self.batch_size, normalize=False)
 
         # prepare for usage in encoder
@@ -610,7 +610,7 @@ class CombinationTrainer:
 
     def validate(self, indices):
         # get data from replay buffer
-        data = self.replay_buffer.sample_random_few_step_batch(indices, self.batch_size, normalize=False)
+        data = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size, normalize=False)
 
         # prepare for usage in encoder
         encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
