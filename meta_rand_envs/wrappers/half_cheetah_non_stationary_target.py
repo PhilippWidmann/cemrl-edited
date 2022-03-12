@@ -26,6 +26,7 @@ class HalfCheetahNonStationaryTargetWrappedEnv(HalfCheetahNonStationaryTargetEnv
 
 @register_env('cheetah-stationary-target-quadraticReward')
 @register_env('cheetah-stationary-target-quadraticReward-optim')
+@register_env('cheetah-stationary-targetTwosided-quadraticReward-optim')
 @register_env('cheetah-stationary-target-quadraticReward-optim-firstOrder')
 @register_env('cheetah-stationary-target-quadraticReward-noActions')
 @register_env('cheetah-stationary-target-quadraticReward-specialInput')
