@@ -5,7 +5,9 @@ import rlkit.torch.pytorch_util as ptu
 
 class StackedReplayBuffer:
     def __init__(self, max_replay_buffer_size,
-                 time_steps,
+                 encoder_time_steps,
+                 decoder_time_window,
+                 max_path_length,
                  observation_dim,
                  action_dim,
                  task_indicator_dim,
@@ -31,7 +33,11 @@ class StackedReplayBuffer:
         # self._terminals[i] = a terminal was received at time i
         self._terminals = np.zeros((max_replay_buffer_size, 1), dtype='uint8')
 
-        self.time_steps = time_steps
+        self.encoder_time_steps = encoder_time_steps
+        # Preprocess decoder window: Make endpoint inclusive, replace Inf with max_path_length
+        decoder_time_window[0] = max(decoder_time_window[0], -max_path_length)
+        decoder_time_window[1] = min(decoder_time_window[1] + 1, max_path_length + 1)
+        self.decoder_time_window = tuple(decoder_time_window)
         self._top = 0
         self._size = 0
 
@@ -141,45 +147,57 @@ class StackedReplayBuffer:
         )
 
     # Sequence sample functions
-    def get_few_step_data_batch(self, points, batch_size, normalize=True):
+    def get_few_step_data_batch(self, points, batch_size, normalize=True, step_mode='encoder'):
         # the points in time together with their <time_step> many entries from before are sampled
         # check if the current point is still in the same 'episode' else take episode start
-        all_indices = points[:, None] + np.arange(-self.time_steps, 1)[None, :]
-        match_map = (self._first_timestep[all_indices] != self._first_timestep[points][:, None])
+        if step_mode == 'encoder':
+            all_indices = points[:, np.newaxis] + np.arange(-self.encoder_time_steps, 1)[np.newaxis, :]
+        elif step_mode == 'decoder':
+            all_indices = points[:, np.newaxis] + np.arange(*self.decoder_time_window)[np.newaxis, :]
+        else:
+            raise ValueError(f'step_mode={step_mode} is unknown. This should not happen and is probably a bug.')
 
         data = self.get_data_batch(all_indices)
+        padding_mask = (self._first_timestep[all_indices] != self._first_timestep[points][:, np.newaxis])
 
         if normalize:
             data = self.normalize_data(data)
 
         # TODO: Change in case keys are changed
         # Set data outside of trajectory to 0
-        data['observations'][match_map] = 0.
-        data['next_observations'][match_map] = 0.
-        data['actions'][match_map] = 0.
-        data['rewards'][match_map] = 0.
-        data['task_indicators'][match_map] = 0.
-        data['base_task_indicators'][match_map] = 0.
-        data['next_task_indicators'][match_map] = 0.
-        data['next_base_task_indicators'][match_map] = 0.
-        data['terminals'][match_map] = 0.
+        data['observations'][padding_mask] = 0.
+        data['next_observations'][padding_mask] = 0.
+        data['actions'][padding_mask] = 0.
+        data['rewards'][padding_mask] = 0.
+        data['task_indicators'][padding_mask] = 0.
+        data['base_task_indicators'][padding_mask] = 0.
+        data['next_task_indicators'][padding_mask] = 0.
+        data['next_base_task_indicators'][padding_mask] = 0.
+        data['terminals'][padding_mask] = 0.
 
-        for key in data:
-            # Todo: This seems wrong, or at least dependent on points.shape[0] == batch_size ?
-            data[key] = np.reshape(data[key], (batch_size, self.time_steps + 1, -1))
+        return data, padding_mask
 
-        return data
-
-    def sample_random_few_step_data_batch(self, points, batch_size, normalize=True, normalize_sac=False, prio=None, return_sac_data=False):
+    def sample_random_few_step_data_batch(self, points, batch_size, normalize=True, normalize_sac=False, prio=None,
+                                          return_encoder_data=True, return_decoder_data=False, return_sac_data=False):
         ''' batch of unordered small sequences of transitions '''
         indices = self.sample_indices(points, batch_size, prio=prio)
-        if not return_sac_data:
-            return self.get_few_step_data_batch(indices, batch_size, normalize=normalize)
-        else:
+        encoder_data, encoder_padding = None, None
+        decoder_data, decoder_padding = None, None
+        sac_data = None
+        if return_encoder_data:
+            encoder_data, encoder_padding = self.get_few_step_data_batch(indices, batch_size, normalize=normalize,
+                                                                         step_mode='encoder')
+        if return_decoder_data:
+            decoder_data, decoder_padding = self.get_few_step_data_batch(indices, batch_size, normalize=normalize,
+                                                                         step_mode='decoder')
+        if return_sac_data:
             sac_data = self.get_data_batch(indices)
             if normalize_sac:
                 sac_data = self.normalize_data(sac_data)
-            return self.get_few_step_data_batch(indices, batch_size, normalize=normalize), sac_data
+
+        res = [val for val in [encoder_data, encoder_padding, decoder_data, decoder_padding, sac_data]
+               if val is not None]
+        return tuple(res)
 
     # Relabeler util function
     def relabel_z(self, start, batch_size, z, next_z, y, next_y):
@@ -236,7 +254,7 @@ class StackedReplayBuffer:
             perm = torch.randperm(encoder_input.shape[1]).long()
             encoder_input = encoder_input[:, perm]
 
-        if self.time_steps == -1:
+        if self.encoder_time_steps == -1:
             raise NotImplementedError('The convention time_steps==-1 equals variable length input has not been implemented.')
 
         return encoder_input.to(ptu.device)

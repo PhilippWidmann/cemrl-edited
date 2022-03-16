@@ -150,35 +150,36 @@ class PolicyTrainer:
         # get data from replay buffer
         if step == 0:
             gt.stamp('pt_before_sample')
-        batch_enc, batch = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size,
-                                                                                normalize=self.use_data_normalization,
-                                                                                normalize_sac=self.use_sac_data_normalization,
-                                                                                return_sac_data=True)
+        batch_enc, _, batch_sac = \
+            self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size,
+                                                                 normalize=self.use_data_normalization,
+                                                                 normalize_sac=self.use_sac_data_normalization,
+                                                                 return_sac_data=True)
         if step == 0:
             gt.stamp('pt_sample')
 
-        rewards = ptu.from_numpy(batch['rewards'])
-        terminals = ptu.from_numpy(batch['terminals'])
-        obs = ptu.from_numpy(batch['observations'])
-        actions = ptu.from_numpy(batch['actions'])
-        next_obs = ptu.from_numpy(batch['next_observations'])
+        rewards = ptu.from_numpy(batch_sac['rewards'])
+        terminals = ptu.from_numpy(batch_sac['terminals'])
+        obs = ptu.from_numpy(batch_sac['observations'])
+        actions = ptu.from_numpy(batch_sac['actions'])
+        next_obs = ptu.from_numpy(batch_sac['next_observations'])
 
         encoder_input = self.replay_buffer.make_encoder_data(batch_enc, self.batch_size)
         task_z, task_y = self.encoder(encoder_input)
         task_z = task_z.detach()
         task_y = task_y.detach()
         # Without rela
-        # task_z = ptu.from_numpy(batch['task_indicators'])
-        # task_y = ptu.from_numpy(batch['base_task_indicators'])
-        # new_task_z = ptu.from_numpy(batch['next_task_indicators'])
-        # new_task_y = ptu.from_numpy(batch['next_base_task_indicators'])
+        # task_z = ptu.from_numpy(batch_sac['task_indicators'])
+        # task_y = ptu.from_numpy(batch_sac['base_task_indicators'])
+        # new_task_z = ptu.from_numpy(batch_sac['next_task_indicators'])
+        # new_task_y = ptu.from_numpy(batch_sac['next_base_task_indicators'])
         if step == 0:
             gt.stamp('pt_to_torch')
 
         # for debug
         # task_z = torch.zeros_like(task_z)
         # new_task_z = torch.zeros_like(new_task_z)
-        # task_z = torch.from_numpy(batch['true_tasks'])
+        # task_z = torch.from_numpy(batch_sac['true_tasks'])
         # new_task_z = torch.cat([task_z[1:,:], task_z[-1,:].view(1,1)])
 
         # Todo: We overwrite the new task here. Is this really intentional?
@@ -294,7 +295,7 @@ class PolicyTrainer:
             self._need_to_update_eval_statistics = False
             """
             Eval should set this to None.
-            This way, these statistics are only computed for one batch.
+            This way, these statistics are only computed for one batch_sac.
             """
             policy_loss = (log_pi - q_new_actions).mean()
 

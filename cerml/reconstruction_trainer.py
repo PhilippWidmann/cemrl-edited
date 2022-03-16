@@ -207,16 +207,18 @@ class ReconstructionTrainer(nn.Module):
 
         # get data from replay buffer
         # TODO: for validation data use all data --> batch size == validation size
-        data = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size, normalize=self.use_data_normalization)
+        data_enc, mask_enc, data_dec, mask_dec = \
+            self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size, return_decoder_data=True,
+                                                                 normalize=self.use_data_normalization)
 
         # prepare for usage in encoder
-        encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
+        encoder_input = self.replay_buffer.make_encoder_data(data_enc, self.batch_size)
         # prepare for usage in decoder
-        decoder_action = ptu.from_numpy(data['actions'])
-        decoder_state = ptu.from_numpy(data['observations'])
-        decoder_next_state = ptu.from_numpy(data['next_observations'])
-        decoder_reward = ptu.from_numpy(data['rewards'])
-        true_task = data['true_tasks']
+        decoder_action = ptu.from_numpy(data_dec['actions'])
+        decoder_state = ptu.from_numpy(data_dec['observations'])
+        decoder_next_state = ptu.from_numpy(data_dec['next_observations'])
+        decoder_reward = ptu.from_numpy(data_dec['rewards'])
+        true_task = data_dec['true_tasks']
 
         if not self.reconstruct_all_steps:
             # Reconstruct only the current timestep
@@ -243,7 +245,7 @@ class ReconstructionTrainer(nn.Module):
         for y in range(self.num_classes):
             z, _ = self.encoder.sample_z(y_distribution, z_distributions, y_usage="specific", y=y)
             if self.reconstruct_all_steps:
-                z = z.unsqueeze(1).repeat(1, self.timesteps + 1, 1)
+                z = z.unsqueeze(1).repeat(1, decoder_state.shape[1], 1)
 
             # put in decoder to get likelihood
             state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
@@ -330,15 +332,18 @@ class ReconstructionTrainer(nn.Module):
     def validate(self, indices):
         with torch.no_grad():
             # get data from replay buffer
-            data = self.replay_buffer.sample_random_few_step_data_batch(indices, self.validation_batch_size, normalize=self.use_data_normalization)
+            data_enc, mask_enc, data_dec, mask_dec = \
+                self.replay_buffer.sample_random_few_step_data_batch(indices, self.validation_batch_size,
+                                                                     return_decoder_data=True,
+                                                                     normalize=self.use_data_normalization)
 
             # prepare for usage in encoder
-            encoder_input = self.replay_buffer.make_encoder_data(data, self.validation_batch_size)
+            encoder_input = self.replay_buffer.make_encoder_data(data_enc, self.validation_batch_size)
             # prepare for usage in decoder
-            decoder_action = ptu.from_numpy(data['actions'])[:, -1, :]
-            decoder_state = ptu.from_numpy(data['observations'])[:, -1, :]
-            decoder_next_state = ptu.from_numpy(data['next_observations'])[:, -1, :]
-            decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
+            decoder_action = ptu.from_numpy(data_dec['actions'])[:, -1, :]
+            decoder_state = ptu.from_numpy(data_dec['observations'])[:, -1, :]
+            decoder_next_state = ptu.from_numpy(data_dec['next_observations'])[:, -1, :]
+            decoder_reward = ptu.from_numpy(data_dec['rewards'])[:, -1, :]
 
             if self.use_state_diff:
                 decoder_state_target = (decoder_next_state - decoder_state)[:, :self.state_reconstruction_clip]

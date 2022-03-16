@@ -156,6 +156,8 @@ def initialize_networks(variant, env, experiment_log_dir):
     replay_buffer = StackedReplayBuffer(
         variant['algo_params']['max_replay_buffer_size'],
         time_steps,
+        variant['algo_params']['decoder_time_window'],
+        variant['algo_params']['max_path_length'],
         obs_dim,
         action_dim,
         latent_dim,
@@ -379,7 +381,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/experimental/cheetah-stationary-target-quadraticReward-allT-specialInput-2.json")
+@click.argument('config', default="configs/debug/cheetah-stationary-target-enc-dec-separation.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)

@@ -46,6 +46,7 @@ legacy_default_config = dict(
         batch_size_policy=256,  # batch size policy trainer
         batch_size_relabel=1024,  # batch size relabeler
         time_steps=30,  # timesteps before current to be considered for determine current task
+        decoder_time_window=[-30, 0],  # interval of timesteps (relative to the current one) used in the decoder for reconstruction loss. Both endpoints included. -+np.inf corresponds to beginning/end of the episode
         latent_size=1,  # dimension of the latent context vector z
         sac_layer_size=300,  # layer size for SAC networks, value 300 taken from PEARL
         max_replay_buffer_size=10000000,  # write as integer!
