@@ -340,21 +340,36 @@ class ReconstructionTrainer(nn.Module):
             # prepare for usage in encoder
             encoder_input = self.replay_buffer.make_encoder_data(data_enc, self.validation_batch_size)
             # prepare for usage in decoder
-            decoder_action = ptu.from_numpy(data_dec['actions'])[:, -1, :]
-            decoder_state = ptu.from_numpy(data_dec['observations'])[:, -1, :]
-            decoder_next_state = ptu.from_numpy(data_dec['next_observations'])[:, -1, :]
-            decoder_reward = ptu.from_numpy(data_dec['rewards'])[:, -1, :]
+            decoder_action = ptu.from_numpy(data_dec['actions'])
+            decoder_state = ptu.from_numpy(data_dec['observations'])
+            decoder_next_state = ptu.from_numpy(data_dec['next_observations'])
+            decoder_reward = ptu.from_numpy(data_dec['rewards'])
+
+            if not self.reconstruct_all_steps:
+                # Reconstruct only the current timestep
+                decoder_action = decoder_action[:, -1, :]
+                decoder_state = decoder_state[:, -1, :]
+                decoder_next_state = decoder_next_state[:, -1, :]
+                decoder_reward = decoder_reward[:, -1, :]
 
             if self.use_state_diff:
-                decoder_state_target = (decoder_next_state - decoder_state)[:, :self.state_reconstruction_clip]
+                decoder_state_target = (decoder_next_state - decoder_state)[..., :self.state_reconstruction_clip]
             else:
-                decoder_state_target = decoder_next_state[:, :self.state_reconstruction_clip]
+                decoder_state_target = decoder_next_state[..., :self.state_reconstruction_clip]
 
             z, y = self.encoder(encoder_input)
-            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z) # Todo: Include mask_dec when we actually reconstruct all timesteps
-            reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
+            if self.reconstruct_all_steps:
+                z = z.unsqueeze(1).repeat(1, decoder_state.shape[1], 1)
+            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z, mask_dec)
+
+            reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=-1)
+            if self.reconstruct_all_steps:
+                reward_loss = torch.mean(reward_loss, dim=1)
+
             if self.use_state_decoder:
-                state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
+                state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=-1)
+                if self.reconstruct_all_steps:
+                    state_loss = torch.mean(state_loss, dim=1)
             else:
                 state_loss = torch.tensor(0)
 
