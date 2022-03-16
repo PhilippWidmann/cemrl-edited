@@ -233,7 +233,7 @@ class DecoderMDP(nn.Module):
             output_size=reward_dim
         )
 
-    def forward(self, state, action, next_state, z):
+    def forward(self, state, action, next_state, z, padding_mask=None):
         if self.use_state_decoder:
             state_estimate = self.net_state_decoder(torch.cat([state, action, z], dim=-1))
         else:
@@ -243,5 +243,12 @@ class DecoderMDP(nn.Module):
             reward_estimate = self.net_reward_decoder(torch.cat([state, action, next_state, z], dim=-1))
         else:
             reward_estimate = self.net_reward_decoder(torch.cat([state, action, z], dim=-1))
+
+        # Ignore all the padding in the input (if present) and set the corresponding estimates to 0
+        # Cannot ignore them sooner since the input size has to be the same for all batch samples
+        if padding_mask is not None:
+            reward_estimate[padding_mask] = 0
+            if state_estimate is not None:
+                state_estimate[padding_mask] = 0
 
         return state_estimate, reward_estimate

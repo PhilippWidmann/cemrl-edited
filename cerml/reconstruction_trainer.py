@@ -248,7 +248,7 @@ class ReconstructionTrainer(nn.Module):
                 z = z.unsqueeze(1).repeat(1, decoder_state.shape[1], 1)
 
             # put in decoder to get likelihood
-            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
+            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z, mask_dec)
             reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=-1)
             if self.reconstruct_all_steps:
                 reward_loss = torch.mean(reward_loss, dim=1)
@@ -351,7 +351,7 @@ class ReconstructionTrainer(nn.Module):
                 decoder_state_target = decoder_next_state[:, :self.state_reconstruction_clip]
 
             z, y = self.encoder(encoder_input)
-            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z)
+            state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z) # Todo: Include mask_dec when we actually reconstruct all timesteps
             reward_loss = torch.sum((reward_estimate - decoder_reward) ** 2, dim=1)
             if self.use_state_decoder:
                 state_loss = torch.sum((state_estimate - decoder_state_target) ** 2, dim=1)
