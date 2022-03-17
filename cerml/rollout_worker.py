@@ -196,6 +196,7 @@ class RolloutWorker:
         self.action_space = self.env.action_space.low.size
         self.obs_space = self.env.observation_space.low.size
         self.context = None
+        self.padding_mask = None
 
     def obtain_samples_from_list(self, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
         results = []
@@ -237,6 +238,7 @@ class RolloutWorker:
         agent_infos = []
         env_infos = []
         self.context = torch.zeros((self.time_steps, self.obs_space + self.action_space + 1 + self.obs_space))
+        self.padding_mask = np.ones((1, self.time_steps), dtype=bool)
         action_space = int(np.prod(self.env.action_space.shape))
 
         if self.scripted_policy:
@@ -258,7 +260,7 @@ class RolloutWorker:
                           / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
             else:
                 o_input = o
-            out = self.agent.get_action(agent_input, o_input, deterministic=deterministic, z_debug=None, env=self.env, return_distributions=return_distributions)
+            out = self.agent.get_action(agent_input, o_input, input_padding=self.padding_mask, deterministic=deterministic, z_debug=None, env=self.env, return_distributions=return_distributions)
             a = out[0]
             agent_info = out[1]
             task_indicator = out[2]
@@ -296,7 +298,7 @@ class RolloutWorker:
         else:
             next_o_input = next_o
         _, _, next_task_indicator, next_base_task_indicator, *_ = \
-            self.agent.get_action(agent_input, next_o_input, deterministic=deterministic, env=self.env)
+            self.agent.get_action(agent_input, next_o_input, input_padding=self.padding_mask, deterministic=deterministic, env=self.env)
         actions = np.array(actions)
         if len(actions.shape) == 1:
             actions = np.expand_dims(actions, 1)
@@ -361,6 +363,7 @@ class RolloutWorker:
         data = torch.cat([o, a, r, next_o]).view(1, -1)
         context = torch.cat([self.context, data], dim=0)
         context = context[-self.time_steps:]
+        self.padding_mask = np.concatenate([self.padding_mask[:, 1:], np.zeros((1, 1), dtype=bool)], axis=-1)
         self.context = context
 
     def build_encoder_input(self, obs, context, action_space):

@@ -52,8 +52,9 @@ def plot_per_episode(results, y, y_const=None, y_fill=None, x='time', fig_ax=Non
 
     p = ax.plot(data_x, data_y)
     if y_fill is not None:
+        # Skip the 0-th timestep, since the "informationless" encoding can have very large variance
         data_y_fill = get_quantity(results, y_fill)
-        ax.fill_between(data_x, data_y - data_y_fill, data_y + data_y_fill, color=p[-1].get_color(), alpha=0.3)
+        ax.fill_between(data_x[1:], (data_y - data_y_fill)[1:], (data_y + data_y_fill)[1:], color=p[-1].get_color(), alpha=0.3)
     if y_const is not None:
         data_y_const = get_quantity(results, y_const)
         ax.plot(data_x, data_y_const, color=p[-1].get_color(), linestyle='--')

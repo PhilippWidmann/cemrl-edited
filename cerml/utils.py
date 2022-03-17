@@ -11,7 +11,7 @@ def product_of_gaussians3D(mus, sigmas_squared):
     mu = sigma_squared * torch.sum(mus / sigmas_squared, dim=1)
     return mu, sigma_squared
 
-def generate_gaussian(mu_sigma, latent_dim, sigma_ops="softplus", mode=None):
+def process_gaussian_parameters(mu_sigma, latent_dim, sigma_ops="softplus", mode=None):
     """
     Generate a Gaussian distribution given a selected parametrization.
     """
@@ -26,6 +26,6 @@ def generate_gaussian(mu_sigma, latent_dim, sigma_ops="softplus", mode=None):
     else:
         mu = mus
         sigma = sigmas
-    return torch.distributions.normal.Normal(mu, sigma)
+    return torch.cat([mu, sigma], dim=-1)
 
 

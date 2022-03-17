@@ -11,14 +11,15 @@ class NoActionEncoder(Encoder):
                  reward_dim,
                  net_complex_enc_dec,
                  encoder_type,
+                 encoder_exclude_padding,
                  latent_dim,
                  batch_size,
                  num_classes,
                  time_steps=None,
                  merge_mode=None
                  ):
-        super().__init__(state_dim, 0, reward_dim, net_complex_enc_dec, encoder_type, latent_dim, batch_size,
-                         num_classes, time_steps, merge_mode)
+        super().__init__(state_dim, 0, reward_dim, net_complex_enc_dec, encoder_type, encoder_exclude_padding,
+                         latent_dim, batch_size, num_classes, time_steps, merge_mode)
         self.original_input_dim = state_dim + action_dim + reward_dim + state_dim
         self.modified_input_dim = state_dim + reward_dim + state_dim
         # exclude the action indices, keep the rest
@@ -33,11 +34,12 @@ class NoActionEncoder(Encoder):
         else:
             raise ValueError(f'Unexpected input dimension {x.shape[-1]}')
 
-    def forward(self, x, return_distributions=False):
-        return super().forward(self.exclude_actions(x), return_distributions=return_distributions)
+    def forward(self, x, padding_mask=None, return_distributions=False, exclude_padding=False):
+        return super().forward(self.exclude_actions(x), padding_mask=padding_mask,
+                               return_distributions=return_distributions, exclude_padding=exclude_padding)
 
-    def encode(self, x):
-        return super().encode(self.exclude_actions(x))
+    def encode(self, x, padding_mask=None, exclude_padding=False):
+        return super().encode(self.exclude_actions(x), padding_mask=padding_mask, exclude_padding=exclude_padding)
 
 
 class SpecialOmissionEncoder(Encoder):
@@ -47,6 +49,7 @@ class SpecialOmissionEncoder(Encoder):
                  reward_dim,
                  net_complex_enc_dec,
                  encoder_type,
+                 encoder_exclude_padding,
                  latent_dim,
                  batch_size,
                  num_classes,
@@ -59,8 +62,8 @@ class SpecialOmissionEncoder(Encoder):
             self.relevant_input_indices = relevant_input_indices
         else:
             self.relevant_input_indices = [8, 26, 35]
-        super().__init__(0, len(self.relevant_input_indices), 0, net_complex_enc_dec, encoder_type, latent_dim, batch_size,
-                         num_classes, time_steps, merge_mode)
+        super().__init__(0, len(self.relevant_input_indices), 0, net_complex_enc_dec, encoder_type,
+                         encoder_exclude_padding, latent_dim, batch_size, num_classes, time_steps, merge_mode)
         self.original_input_dim = state_dim + action_dim + reward_dim + state_dim
         self.modified_input_dim = len(relevant_input_indices)
 
@@ -72,11 +75,12 @@ class SpecialOmissionEncoder(Encoder):
         else:
             raise ValueError(f'Unexpected input dimension {x.shape[-1]}')
 
-    def forward(self, x, return_distributions=False):
-        return super().forward(self.exclude_indices(x), return_distributions=return_distributions)
+    def forward(self, x, padding_mask=None, return_distributions=False, exclude_padding=False):
+        return super().forward(self.exclude_indices(x), padding_mask=padding_mask,
+                               return_distributions=return_distributions, exclude_padding=exclude_padding)
 
-    def encode(self, x):
-        return super().encode(self.exclude_indices(x))
+    def encode(self, x, padding_mask=None, exclude_padding=False):
+        return super().encode(self.exclude_indices(x), padding_mask=padding_mask, exclude_padding=exclude_padding)
 
 
 class NoOpEncoder(nn.Module):

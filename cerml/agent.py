@@ -17,12 +17,12 @@ class CEMRLAgent(nn.Module):
         self.prior_pz = prior_pz
         self.policy = policy
 
-    def get_action(self, encoder_input, state, deterministic=False, z_debug=None, env=None, return_distributions=False):
+    def get_action(self, encoder_input, state, input_padding=None, deterministic=False, z_debug=None, env=None, return_distributions=False):
         state = ptu.from_numpy(state).view(1, -1)
         if return_distributions:
-            z, y, distribution = self.encoder(encoder_input, return_distributions)
+            z, y, distribution = self.encoder(encoder_input, return_distributions=return_distributions, padding_mask=input_padding)
         else:
-            z, y = self.encoder(encoder_input)
+            z, y = self.encoder(encoder_input, padding_mask=input_padding)
         if z_debug is not None:
             z = z_debug
         a, a_info = self.policy.get_action(state, z, y, deterministic=deterministic)

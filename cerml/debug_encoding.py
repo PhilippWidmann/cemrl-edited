@@ -212,7 +212,7 @@ class EncodingDebugger:
         for i in range(repetitions):
             data, _ = self.replay_buffer.sample_random_few_step_data_batch(all_ind, val_batch_size, normalize=self.use_data_normalization)
 
-            encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
+            encoder_input, _ = self.replay_buffer.make_encoder_data(data, self.batch_size)
             y_distribution, z_distribution = self.encoder.encode(encoder_input)
             z, y = self.encoder.sample_z(y_distribution, z_distribution, y_usage='most_likely', sampler='mean')
             z, y = ptu.get_numpy(z), ptu.get_numpy(y)
@@ -303,7 +303,7 @@ class EncodingDebugger:
 
     def decoder_training_step(self, indices, epoch):
         data, _ = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size, normalize=self.use_data_normalization)
-        encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
+        encoder_input, _ = self.replay_buffer.make_encoder_data(data, self.batch_size)
         decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
 
         self.debug_decoder.to(encoder_input.device)
@@ -333,7 +333,7 @@ class EncodingDebugger:
     def decoder_validate(self, indices):
         with torch.no_grad():
             data, _ = self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size, normalize=self.use_data_normalization)
-            encoder_input = self.replay_buffer.make_encoder_data(data, self.batch_size)
+            encoder_input, _ = self.replay_buffer.make_encoder_data(data, self.batch_size)
             decoder_reward = ptu.from_numpy(data['rewards'])[:, -1, :]
 
             z, y = self.encoder(encoder_input)

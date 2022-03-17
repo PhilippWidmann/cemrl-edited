@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.distributions.kl as kl
-from cerml.utils import generate_gaussian
+from cerml.utils import process_gaussian_parameters
 import rlkit.torch.pytorch_util as ptu
 
 from rlkit.core import logger
@@ -212,7 +212,7 @@ class ReconstructionTrainer(nn.Module):
                                                                  normalize=self.use_data_normalization)
 
         # prepare for usage in encoder
-        encoder_input = self.replay_buffer.make_encoder_data(data_enc, self.batch_size)
+        encoder_input, mask_enc = self.replay_buffer.make_encoder_data(data_enc, self.batch_size, padding_mask=mask_enc)
         # prepare for usage in decoder
         decoder_action = ptu.from_numpy(data_dec['actions'])
         decoder_state = ptu.from_numpy(data_dec['observations'])
@@ -234,7 +234,7 @@ class ReconstructionTrainer(nn.Module):
             decoder_state_target = decoder_next_state[..., :self.state_reconstruction_clip]
 
         # Forward pass through encoder
-        y_distribution, z_distributions = self.encoder.encode(encoder_input)
+        y_distribution, z_distributions = self.encoder.encode(encoder_input, mask_enc)
 
         kl_qz_pz = ptu.zeros(self.batch_size, self.num_classes)
         state_losses = ptu.zeros(self.batch_size, self.num_classes)
@@ -321,7 +321,8 @@ class ReconstructionTrainer(nn.Module):
             one_hot = ptu.zeros(self.batch_size, self.num_classes)
             one_hot[:, y] = 1
             mu_sigma = self.prior_pz_layer(one_hot)#.detach() # we do not want to backprop into prior
-            return generate_gaussian(mu_sigma, self.latent_dim)
+            mu_sigma = process_gaussian_parameters(mu_sigma, self.latent_dim)
+            return torch.distributions.normal.Normal(*torch.split(mu_sigma, split_size_or_sections=self.latent_dim, dim=-1))
 
     def prior_py(self):
         '''
@@ -338,7 +339,7 @@ class ReconstructionTrainer(nn.Module):
                                                                      normalize=self.use_data_normalization)
 
             # prepare for usage in encoder
-            encoder_input = self.replay_buffer.make_encoder_data(data_enc, self.validation_batch_size)
+            encoder_input, mask_enc = self.replay_buffer.make_encoder_data(data_enc, self.validation_batch_size, padding_mask=mask_enc)
             # prepare for usage in decoder
             decoder_action = ptu.from_numpy(data_dec['actions'])
             decoder_state = ptu.from_numpy(data_dec['observations'])
@@ -357,7 +358,7 @@ class ReconstructionTrainer(nn.Module):
             else:
                 decoder_state_target = decoder_next_state[..., :self.state_reconstruction_clip]
 
-            z, y = self.encoder(encoder_input)
+            z, y = self.encoder(encoder_input, mask_enc)
             if self.reconstruct_all_steps:
                 z = z.unsqueeze(1).repeat(1, decoder_state.shape[1], 1)
             state_estimate, reward_estimate = self.decoder(decoder_state, decoder_action, decoder_next_state, z, mask_dec)

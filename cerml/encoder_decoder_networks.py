@@ -1,10 +1,11 @@
+import numpy as np
 import torch
 from torch import nn as nn
 import torch.nn.functional as F
 
 from rlkit.torch.networks import Mlp
 import rlkit.torch.pytorch_util as ptu
-from cerml.utils import generate_gaussian
+from cerml.utils import process_gaussian_parameters
 from cerml.shared_encoder_variants import SharedEncoderTimestepMLP, SharedEncoderTrajectoryMLP, SharedEncoderGRU, \
     SharedEncoderConv, SharedEncoderFCN
 
@@ -42,6 +43,7 @@ class Encoder(nn.Module):
                  reward_dim,
                  net_complex_enc_dec,
                  encoder_type,
+                 encoder_exclude_padding,
                  latent_dim,
                  batch_size,
                  num_classes,
@@ -56,6 +58,7 @@ class Encoder(nn.Module):
         self.batch_size = batch_size
         self.num_classes = num_classes
         self.merge_mode = merge_mode
+        self.always_exclude_padding = encoder_exclude_padding
 
         if encoder_type == 'TimestepMLP':
             self.shared_encoder = SharedEncoderTimestepMLP(state_dim, action_dim, reward_dim, net_complex_enc_dec)
@@ -83,7 +86,7 @@ class Encoder(nn.Module):
                                          hidden_sizes=[self.shared_encoder.shared_dim],
                                          output_size=self.shared_encoder.shared_dim)
 
-    def forward(self, x, return_distributions=False):
+    def forward(self, x, padding_mask=None, return_distributions=False, exclude_padding=False):
         """
         Encode the provided context
         :param x: context of the form (batch_size, time_steps, obs + action + reward + next_obs)
@@ -91,7 +94,7 @@ class Encoder(nn.Module):
         :return: z - task indicator [batch_size, latent_dim]
                  y - base task indicator [batch_size]
         """
-        y_distribution, z_distributions = self.encode(x)
+        y_distribution, z_distributions = self.encode(x, padding_mask=padding_mask, exclude_padding=exclude_padding)
         # TODO: could be more efficient if only compute the Gaussian layer of the y that we pick later
         z, y = self.sample_z(y_distribution, z_distributions, y_usage="most_likely", sampler="mean")
         if return_distributions:
@@ -104,7 +107,47 @@ class Encoder(nn.Module):
         else:
             return z, y
 
-    def encode(self, x):
+    def encode(self, x, padding_mask=None, exclude_padding=False):
+        z_combination_mode = 'multiplication' if self.shared_encoder.returns_timestep_encodings else None
+        if self.always_exclude_padding or exclude_padding:
+            if padding_mask is None:
+                raise ValueError('Padding should be excluded, but no padding_mask is specified.')
+
+            y = torch.zeros((x.shape[0], self.num_classes), dtype=torch.float, device=ptu.device)
+            final_mu_sigma = [torch.zeros((x.shape[0], 2*self.latent_dim), dtype=torch.float, device=ptu.device)
+                              for _ in range(self.num_classes)]
+
+            padding_lengths = padding_mask.sum(axis=1)
+            unique_padding_lengths = np.unique(padding_lengths)
+
+            # Process samples separately, excluding the padding from the input
+            # For performance, we can combine all samples with the same number of available timesteps into a batch
+            for length in unique_padding_lengths:
+                relevant_samples = padding_lengths == length
+                relevant_ind_per_sample = ~padding_mask[relevant_samples][0]
+                # If we truly have no data (in the first step of the rollout), we give one of the padding-0's as input
+                if not np.any(relevant_ind_per_sample):
+                    relevant_ind_per_sample[-1] = True
+                x_length = x[relevant_samples][:, relevant_ind_per_sample]
+                y_temp, all_mu_sigma_temp = self._encode_partial(x_length)
+                final_mu_sigma_temp = [process_gaussian_parameters(mu_sigma, self.latent_dim, mode=z_combination_mode)
+                                       for mu_sigma in all_mu_sigma_temp]
+                y[relevant_samples] = y_temp
+                for i in range(self.num_classes):
+                    final_mu_sigma[i][relevant_samples] = final_mu_sigma_temp[i]
+        else:
+            # Just encode everything at once; treats padding as valid data points
+            y, all_mu_sigma = self._encode_partial(x)
+            final_mu_sigma = [process_gaussian_parameters(mu_sigma, self.latent_dim, mode=z_combination_mode)
+                              for mu_sigma in all_mu_sigma]
+
+        # Construct the categorical and Normal distributions
+        y_distribution = torch.distributions.categorical.Categorical(probs=y)
+        z_distributions = [torch.distributions.normal.Normal(*torch.split(final_mu_sigma[i], split_size_or_sections=self.latent_dim, dim=-1))
+                           for i in range(self.num_classes)]
+        return y_distribution, z_distributions
+
+    def _encode_partial(self, x):
         # Compute shared encoder forward pass
         m = self.shared_encoder(x)
 
@@ -112,20 +155,15 @@ class Encoder(nn.Module):
         # If the shared encoder produces separate encodings per timestep, we have to merge
         if self.shared_encoder.returns_timestep_encodings:
             y = self.merge_y(m)
-            z_combination_mode = 'multiplication'
         else:
             y = self.class_encoder(m)
-            z_combination_mode = None
-        y_distribution = torch.distributions.categorical.Categorical(probs=y)
 
         # Compute every gauss_encoder forward pass
         all_mu_sigma = []
         for net in self.gauss_encoder_list:
             all_mu_sigma.append(net(m))
-        z_distributions = [generate_gaussian(mu_sigma, self.latent_dim, mode=z_combination_mode)
-                           for mu_sigma in all_mu_sigma]
 
-        return y_distribution, z_distributions
+        return y, all_mu_sigma
 
     def merge_y(self, shared_encoding):
         if self.merge_mode == 'linear' or self.merge_mode == 'mlp':

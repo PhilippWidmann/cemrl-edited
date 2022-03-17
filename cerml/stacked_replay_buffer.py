@@ -228,7 +228,7 @@ class StackedReplayBuffer:
 
         return np.array(self._train_indices), np.array(self._val_indices)
 
-    def make_encoder_data(self, data, batch_size, mode='multiply'):
+    def make_encoder_data(self, data, batch_size, padding_mask=None, mode='multiply'):
         # MLP encoder input: state of last timestep + state, action, reward of all timesteps before
         # input is in form [[t-N], ... [t-1], [t]]
         # therefore set action and reward of last timestep = 0
@@ -244,6 +244,8 @@ class StackedReplayBuffer:
         actions_encoder_input = actions.detach().clone()[:, :-1, :]
         rewards_encoder_input = rewards.detach().clone()[:, :-1, :]
         next_observations_encoder_input = next_observations.detach().clone()[:, :-1, :]
+        if padding_mask is not None:
+            padding_mask = padding_mask[:, :-1]
 
         # size: [batch_size, time_steps, obs+action+reward]
         encoder_input = torch.cat(
@@ -257,7 +259,7 @@ class StackedReplayBuffer:
         if self.encoder_time_steps == -1:
             raise NotImplementedError('The convention time_steps==-1 equals variable length input has not been implemented.')
 
-        return encoder_input.to(ptu.device)
+        return encoder_input.to(ptu.device), padding_mask
 
     def get_stats(self):
         values_dict = dict(

@@ -23,7 +23,7 @@ from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEnc
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
-from cerml.combination_trainer import CombinationTrainer
+# from cerml.combination_trainer import CombinationTrainer
 from cerml.rollout_worker import RolloutCoordinator
 from cerml.agent import CEMRLAgent, ScriptedPolicyAgent
 from cerml.relabeler import Relabeler
@@ -102,6 +102,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         reward_dim,
         net_complex_enc_dec,
         variant['algo_params']['encoder_type'],
+        variant['algo_params']['encoder_exclude_padding'],
         latent_dim,
         variant['algo_params']['batch_size_reconstruction'],
         num_classes,
@@ -381,7 +382,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/debug/cheetah-stationary-target-enc-dec-separation.json")
+@click.argument('config', default="configs/debug-cheetah.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)

@@ -150,7 +150,7 @@ class PolicyTrainer:
         # get data from replay buffer
         if step == 0:
             gt.stamp('pt_before_sample')
-        batch_enc, _, batch_sac = \
+        batch_enc, enc_mask, batch_sac = \
             self.replay_buffer.sample_random_few_step_data_batch(indices, self.batch_size,
                                                                  normalize=self.use_data_normalization,
                                                                  normalize_sac=self.use_sac_data_normalization,
@@ -164,8 +164,8 @@ class PolicyTrainer:
         actions = ptu.from_numpy(batch_sac['actions'])
         next_obs = ptu.from_numpy(batch_sac['next_observations'])
 
-        encoder_input = self.replay_buffer.make_encoder_data(batch_enc, self.batch_size)
-        task_z, task_y = self.encoder(encoder_input)
+        encoder_input, enc_mask = self.replay_buffer.make_encoder_data(batch_enc, self.batch_size, padding_mask=enc_mask)
+        task_z, task_y = self.encoder(encoder_input, enc_mask)
         task_z = task_z.detach()
         task_y = task_y.detach()
         # Without rela
