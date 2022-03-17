@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import torch
 import rlkit.torch.pytorch_util as ptu
@@ -35,6 +36,8 @@ class StackedReplayBuffer:
 
         self.encoder_time_steps = encoder_time_steps
         # Preprocess decoder window: Make endpoint inclusive, replace Inf with max_path_length
+        self.max_path_length = max_path_length
+        self.decoder_full_episode_window = decoder_time_window == [-np.inf, np.inf]
         decoder_time_window[0] = max(decoder_time_window[0], -max_path_length)
         decoder_time_window[1] = min(decoder_time_window[1] + 1, max_path_length + 1)
         self.decoder_time_window = tuple(decoder_time_window)
@@ -157,8 +160,17 @@ class StackedReplayBuffer:
         else:
             raise ValueError(f'step_mode={step_mode} is unknown. This should not happen and is probably a bug.')
 
-        data = self.get_data_batch(all_indices)
         padding_mask = (self._first_timestep[all_indices] != self._first_timestep[points][:, np.newaxis])
+        if step_mode == 'decoder' and self.decoder_full_episode_window:
+            # Todo: This works only if we always fully overwrite episodes (never partially).
+            # Todo: No problem as long as buffer_size = K * max_path_length, but fix nonetheless
+            if np.sum(~padding_mask) != (batch_size * self.max_path_length):
+                warnings.warn('Not all sample episodes had the same length. Reconstruction of the whole episode is unoptimized.')
+            else:
+                all_indices = np.reshape(all_indices[~padding_mask], (batch_size, self.max_path_length))
+                padding_mask = np.zeros((batch_size, self.max_path_length), dtype=np.bool)
+
+        data = self.get_data_batch(all_indices)
 
         if normalize:
             data = self.normalize_data(data)
