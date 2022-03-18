@@ -1,7 +1,7 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='./output/cheetah-stationary-target-quadraticReward/2022_03_17_14_54_22',  # CONFIGURE! path to experiment folder
-    save_dir='./output_analysis/cheetah-stationary-target-quadraticReward/2022_03_17_14_54_22',
+    path_to_weights='./output/cheetah-stationary-target-quadraticReward/2022_03_18_01_54_32',  # CONFIGURE! path to experiment folder
+    save_dir='./output_analysis/cheetah-stationary-target-quadraticReward/2022_03_18_01_54_32',
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
     showcase_itr=[0, 10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500],  # CONFIGURE! epoch for which analysis is performed
     util_params=dict(
