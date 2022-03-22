@@ -48,6 +48,24 @@ class SharedEncoderTimestepMLP(SharedEncoderBase):
         return self.layers(x)
 
 
+class SharedEncoderMeanTimestepMLP(SharedEncoderTimestepMLP):
+    """ Average over the timestep dimension in the last layer, thus returning a combined, order-invariant encoding
+        instead of a timestep-wise one"""
+    returns_timestep_encodings = False
+
+    def __init__(
+            self,
+            state_dim,
+            acton_dim,
+            reward_dim,
+            net_complex_enc_dec
+    ):
+        super().__init__(state_dim, acton_dim, reward_dim, net_complex_enc_dec)
+
+    def forward(self, x):
+        return torch.mean(super().forward(x), dim=1)
+
+
 class SharedEncoderTrajectoryMLP(SharedEncoderBase):
     returns_timestep_encodings = False
 
