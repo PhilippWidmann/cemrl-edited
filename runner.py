@@ -81,6 +81,10 @@ def initialize_networks(variant, env, experiment_log_dir):
     time_steps = variant['algo_params']['time_steps']
     num_classes = variant['reconstruction_params']['num_classes']
 
+    # set parameters if not given
+    if variant['algo_params']['decoder_time_window'] is None:
+        variant['algo_params']['decoder_time_window'] = [-time_steps, 0]
+
     # encoder used: single transitions or trajectories
     if variant['algo_params']['encoder_type'] == 'NoEncoder':
         # debug case: completely omit any encoding and only do SAC training
@@ -382,7 +386,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/separate_encdec_context/cheetah-stationary-target-qR-decContextAll.json")
+@click.argument('config', default="configs/debug-cheetah.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
