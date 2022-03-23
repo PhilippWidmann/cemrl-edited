@@ -268,41 +268,41 @@ class ReconstructionTrainer(nn.Module):
             prior = self.prior_pz(y)
             kl_qz_pz[:, y] = torch.sum(kl.kl_divergence(z_distributions[y], prior), dim=-1)
 
-            # KL ( q(y | x) || p(y) )
-            kl_qy_py = kl.kl_divergence(y_distribution, self.prior_py())
+        # KL ( q(y | x) || p(y) )
+        kl_qy_py = kl.kl_divergence(y_distribution, self.prior_py())
 
-            # Overall ELBO
-            if not self.component_constraint_learning:
-                elbo = torch.sum(torch.sum(torch.mul(y_distribution.probs,  (-1) * nll_px - self.alpha_kl_z * kl_qz_pz), dim=-1) - self.beta_kl_y * kl_qy_py)
+        # Overall ELBO
+        if not self.component_constraint_learning:
+            elbo = torch.sum(torch.sum(torch.mul(y_distribution.probs,  (-1) * nll_px - self.alpha_kl_z * kl_qz_pz), dim=-1) - self.beta_kl_y * kl_qy_py)
 
-            # Component-constraint_learing
-            if self.component_constraint_learning:
-                temp = ptu.zeros_like(y_distribution.probs)
-                true_task_multiplier = temp.scatter(1, ptu.from_numpy(np.array([a["base_task"] for a in true_task[:, 0].tolist()])).unsqueeze(1).long(), 1)
-                loss_nll = nn.NLLLoss(reduction='none')
-                target_label = ptu.from_numpy(np.array([a["base_task"] for a in true_task[:, 0].tolist()])).long()
-                elbo = torch.sum(torch.sum(torch.mul(true_task_multiplier, (-1) * nll_px - self.alpha_kl_z * kl_qz_pz), dim=-1) - self.beta_kl_y * loss_nll(torch.log(y_distribution.probs), target_label))
-            # but elbo should be maximized, and backward function assumes minimization
-            loss = (-1) * elbo
+        # Component-constraint_learing
+        if self.component_constraint_learning:
+            temp = ptu.zeros_like(y_distribution.probs)
+            true_task_multiplier = temp.scatter(1, ptu.from_numpy(np.array([a["base_task"] for a in true_task[:, 0].tolist()])).unsqueeze(1).long(), 1)
+            loss_nll = nn.NLLLoss(reduction='none')
+            target_label = ptu.from_numpy(np.array([a["base_task"] for a in true_task[:, 0].tolist()])).long()
+            elbo = torch.sum(torch.sum(torch.mul(true_task_multiplier, (-1) * nll_px - self.alpha_kl_z * kl_qz_pz), dim=-1) - self.beta_kl_y * loss_nll(torch.log(y_distribution.probs), target_label))
+        # but elbo should be maximized, and backward function assumes minimization
+        loss = (-1) * elbo
 
-            # Optimization strategy:
-            # Decoder: the two head loss functions backpropagate their gradients into corresponding parts
-            # of the network, then ONE common optimizer compute all weight updates
-            # Encoder: the KLs and the likelihood from the decoder backpropagate their gradients into
-            # corresponding parts of the network, then ONE common optimizer computes all weight updates
-            # This is not done explicitly but all within the elbo loss.
+        # Optimization strategy:
+        # Decoder: the two head loss functions backpropagate their gradients into corresponding parts
+        # of the network, then ONE common optimizer compute all weight updates
+        # Encoder: the KLs and the likelihood from the decoder backpropagate their gradients into
+        # corresponding parts of the network, then ONE common optimizer computes all weight updates
+        # This is not done explicitly but all within the elbo loss.
 
-            self.optimizer_encoder.zero_grad()
-            self.optimizer_decoder.zero_grad()
+        self.optimizer_encoder.zero_grad()
+        self.optimizer_decoder.zero_grad()
 
-            # Backward pass: compute gradient of the loss with respect to model parameters
-            loss.backward()
+        # Backward pass: compute gradient of the loss with respect to model parameters
+        loss.backward()
 
-            # Calling the step function on an Optimizer makes an update to its parameters
-            self.optimizer_decoder.step()
-            self.optimizer_encoder.step()
+        # Calling the step function on an Optimizer makes an update to its parameters
+        self.optimizer_decoder.step()
+        self.optimizer_encoder.step()
 
-            return ptu.get_numpy(loss)/self.batch_size, ptu.get_numpy(torch.sum(state_losses, dim=0))/self.batch_size, ptu.get_numpy(torch.sum(reward_losses, dim=0))/self.batch_size
+        return ptu.get_numpy(loss)/self.batch_size, ptu.get_numpy(torch.sum(state_losses, dim=0))/self.batch_size, ptu.get_numpy(torch.sum(reward_losses, dim=0))/self.batch_size
 
     def prior_pz(self, y):
         '''
