@@ -254,13 +254,9 @@ class RolloutWorker:
         if animated:
             self.env.render()
         while path_length < max_path_length:
-            agent_input = self.build_encoder_input(o, self.context, action_space)
-            if self.use_sac_data_normalization and self.replay_buffer_stats_dict is not None:
-                o_input = (o - self.replay_buffer_stats_dict["observations"]["mean"]) \
-                          / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
-            else:
-                o_input = o
-            out = self.agent.get_action(agent_input, o_input, input_padding=self.padding_mask, deterministic=deterministic, z_debug=None, env=self.env, return_distributions=return_distributions)
+            o_input, agent_input, padding_mask = self.build_encoder_input(o, self.context, self.padding_mask)
+            out = self.agent.get_action(agent_input, o_input, input_padding=padding_mask, deterministic=deterministic,
+                                        z_debug=None, env=self.env, return_distributions=return_distributions)
             a = out[0]
             agent_info = out[1]
             task_indicator = out[2]
@@ -291,14 +287,9 @@ class RolloutWorker:
             if d:
                 break
 
-        agent_input = self.build_encoder_input(next_o, self.context, action_space)
-        if self.use_sac_data_normalization and self.replay_buffer_stats_dict is not None:
-            next_o_input = (next_o - self.replay_buffer_stats_dict["observations"]["mean"]) \
-                      / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
-        else:
-            next_o_input = next_o
+        next_o_input, agent_input, paddings_mask = self.build_encoder_input(next_o, self.context, self.padding_mask)
         _, _, next_task_indicator, next_base_task_indicator, *_ = \
-            self.agent.get_action(agent_input, next_o_input, input_padding=self.padding_mask, deterministic=deterministic, env=self.env)
+            self.agent.get_action(agent_input, next_o_input, input_padding=padding_mask, deterministic=deterministic, env=self.env)
         actions = np.array(actions)
         if len(actions.shape) == 1:
             actions = np.expand_dims(actions, 1)
@@ -366,18 +357,28 @@ class RolloutWorker:
         self.padding_mask = np.concatenate([self.padding_mask[:, 1:], np.zeros((1, 1), dtype=bool)], axis=-1)
         self.context = context
 
-    def build_encoder_input(self, obs, context, action_space):
+    def build_encoder_input(self, obs, context, padding_mask):
         encoder_input = context.detach().clone()
+        padding_mask = np.copy(padding_mask)
+
+        if np.sum(~padding_mask) == 0:
+            # For the very first step of an episode, pretend that one padding point is actual data.
+            # Slight inaccuracy, but avoids implementation problems of having no data at all.
+            padding_mask[..., -1] = False
 
         if self.permute_samples:
             perm = torch.LongTensor(torch.randperm(encoder_input.shape[0]))
             encoder_input = encoder_input[perm]
+            padding_mask = padding_mask[..., ptu.get_numpy(perm)]
         encoder_input.unsqueeze_(0)
 
-        if self.time_steps == -1:
-            raise NotImplementedError('The convention time_steps==-1 equals variable length input has not been implemented.')
+        if self.use_sac_data_normalization and self.replay_buffer_stats_dict is not None:
+            o_input = (obs - self.replay_buffer_stats_dict["observations"]["mean"]) \
+                      / (self.replay_buffer_stats_dict["observations"]["std"] + 1e-9)
+        else:
+            o_input = obs
 
-        return encoder_input.to(ptu.device)
+        return o_input, encoder_input.to(ptu.device), padding_mask
 
 
 @ray.remote

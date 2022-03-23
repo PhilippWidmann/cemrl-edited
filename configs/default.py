@@ -37,7 +37,7 @@ default_config = dict(
         encoder_type='TimestepMLP',
         encoder_merge_mode="add",  # if encoder_type==TimestepMLP: how to merge y infos: "add", "add_softmax", "multiply", "linear", "mlp"
         encoder_omit_input=None,  # Debug parameter: Should actions be ignored by VAE
-        encoder_exclude_padding=False,  # Whether to exclude padding during **training** of the VAE. This decreases performance substantially! Note: During rollouts, padding is always disabled.
+        encoder_exclude_padding=False,  # Whether to exclude padding during **training** of the VAE. This is not supported by all encoder_types and is thus disabled by default
         decoder_omit_input=None,
         use_fixed_seeding=True,  # seeding, make comparison more robust
         seed=0,  # seed for torch and numpy

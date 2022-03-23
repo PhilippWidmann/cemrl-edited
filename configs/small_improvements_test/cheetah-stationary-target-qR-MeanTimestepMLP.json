@@ -18,6 +18,7 @@
         "use_data_normalization": true,
         "use_parametrized_alpha": false,
         "encoder_type": "MeanTimestepMLP",
+        "encoder_exclude_padding": true,
         "use_fixed_seeding": true,
         "seed": 0,
         "batch_size_reconstruction": 256,

@@ -110,38 +110,34 @@ class Encoder(nn.Module):
             return z, y
 
     def encode(self, x, padding_mask=None, exclude_padding=False):
-        z_combination_mode = 'multiplication' if self.shared_encoder.returns_timestep_encodings else None
-        if self.always_exclude_padding or exclude_padding:
-            if padding_mask is None:
-                raise ValueError('Padding should be excluded, but no padding_mask is specified.')
-
-            y = torch.zeros((x.shape[0], self.num_classes), dtype=torch.float, device=ptu.device)
-            final_mu_sigma = [torch.zeros((x.shape[0], 2*self.latent_dim), dtype=torch.float, device=ptu.device)
-                              for _ in range(self.num_classes)]
-
-            padding_lengths = padding_mask.sum(axis=1)
-            unique_padding_lengths = np.unique(padding_lengths)
-
-            # Process samples separately, excluding the padding from the input
-            # For performance, we can combine all samples with the same number of available timesteps into a batch
-            for length in unique_padding_lengths:
-                relevant_samples = padding_lengths == length
-                relevant_ind_per_sample = ~padding_mask[relevant_samples][0]
-                # If we truly have no data (in the first step of the rollout), we give one of the padding-0's as input
-                if not np.any(relevant_ind_per_sample):
-                    relevant_ind_per_sample[-1] = True
-                x_length = x[relevant_samples][:, relevant_ind_per_sample]
-                y_temp, all_mu_sigma_temp = self._encode_partial(x_length)
-                final_mu_sigma_temp = [process_gaussian_parameters(mu_sigma, self.latent_dim, mode=z_combination_mode)
-                                       for mu_sigma in all_mu_sigma_temp]
-                y[relevant_samples] = y_temp
-                for i in range(self.num_classes):
-                    final_mu_sigma[i][relevant_samples] = final_mu_sigma_temp[i]
+        if not (self.always_exclude_padding or exclude_padding):
+            # We leave padding included by setting the padding_mask to None before passing it to the relevant functions
+            padding_mask = None
         else:
-            # Just encode everything at once; treats padding as valid data points
-            y, all_mu_sigma = self._encode_partial(x)
-            final_mu_sigma = [process_gaussian_parameters(mu_sigma, self.latent_dim, mode=z_combination_mode)
-                              for mu_sigma in all_mu_sigma]
+            if padding_mask is None:
+                raise ValueError('Padding should be excluded, but no padding_mask is specified. This is likely a bug.')
+
+        # Compute shared encoder forward pass
+        # Just encode everything at once; if necessary, the shared_encoder must take the padding_mask into account.
+        m = self.shared_encoder(x, padding_mask)
+
+        # Compute class probabilities
+        # If the shared encoder produces separate encodings per timestep, we have to merge
+        # In this case, the padding_mask allows ignoring padding timesteps
+        if self.shared_encoder.returns_timestep_encodings:
+            y = self.merge_y(m, padding_mask)
+            z_combination_mode = 'multiplication'
+        else:
+            y = self.class_encoder(m)
+            z_combination_mode = None
+
+        # Compute every gauss_encoder forward pass
+        all_mu_sigma = []
+        for net in self.gauss_encoder_list:
+            all_mu_sigma.append(net(m))
+        final_mu_sigma = [process_gaussian_parameters(mu_sigma, self.latent_dim, mode=z_combination_mode,
+                                                      padding_mask=padding_mask)
+                          for mu_sigma in all_mu_sigma]
 
         # Construct the categorical and Normal distributions
         y_distribution = torch.distributions.categorical.Categorical(probs=y)
@@ -149,40 +145,27 @@ class Encoder(nn.Module):
                            for i in range(self.num_classes)]
         return y_distribution, z_distributions
 
-    def _encode_partial(self, x):
-        # Compute shared encoder forward pass
-        m = self.shared_encoder(x)
-
-        # Compute class probabilities
-        # If the shared encoder produces separate encodings per timestep, we have to merge
-        if self.shared_encoder.returns_timestep_encodings:
-            y = self.merge_y(m)
-        else:
-            y = self.class_encoder(m)
-
-        # Compute every gauss_encoder forward pass
-        all_mu_sigma = []
-        for net in self.gauss_encoder_list:
-            all_mu_sigma.append(net(m))
-
-        return y, all_mu_sigma
-
-    def merge_y(self, shared_encoding):
+    def merge_y(self, shared_encoding, padding_mask=None):
         if self.merge_mode == 'linear' or self.merge_mode == 'mlp':
+            if padding_mask is not None:
+                raise ValueError(f'Cannot exclude padding in merge_mode={self.merge_mode}.'
+                                 f'Make sure to set encoder_exclude_padding=False or change the merge_mode.')
             flat = torch.flatten(shared_encoding, start_dim=1)
             pre_class = self.pre_class_encoder(flat)
             y = self.class_encoder(pre_class)
-        # Variant 2: Add logits
-        elif self.merge_mode == "add":
+        elif self.merge_mode in ['add', 'add_softmax', 'multiply']:
             y = self.class_encoder(shared_encoding)
-            y = y.sum(dim=-2) / y.shape[1]  # add the outcome of individual samples, scale down
-        elif self.merge_mode == "add_softmax":
-            y = self.class_encoder(shared_encoding)
-            y = F.softmax(y.sum(dim=-2), dim=-1)  # add the outcome of individual samples, softmax
-        # Variant 2: Multiply logits
-        elif self.merge_mode == "multiply":
-            y = self.class_encoder(shared_encoding)
-            y = F.softmax(y.prod(dim=-2), dim=-1)  # multiply the outcome of individual samples
+            if padding_mask is not None:
+                padding_mask = torch.tensor(padding_mask, device=ptu.device).unsqueeze(2)
+                y = y * ~padding_mask
+
+            if self.merge_mode == "add":
+                normalizer = y.shape[1] if padding_mask is None else (~padding_mask).sum(dim=1)
+                y = y.sum(dim=1) / normalizer  # add the outcome of individual samples, then normalize
+            elif self.merge_mode == "add_softmax":
+                y = F.softmax(y.sum(dim=-2), dim=-1)  # add the outcome of individual samples, softmax
+            elif self.merge_mode == "multiply":
+                y = F.softmax(y.prod(dim=-2), dim=-1)  # multiply the outcome of individual samples
         elif self.merge_mode is None:
             raise ValueError('The shared encoder returns timestep encodings, but no merge mode is specified.')
         else:

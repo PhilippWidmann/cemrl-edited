@@ -258,6 +258,10 @@ class StackedReplayBuffer:
         next_observations_encoder_input = next_observations.detach().clone()[:, :-1, :]
         if padding_mask is not None:
             padding_mask = padding_mask[:, :-1]
+            # If we had sampled the very first step of an episode, no data remains after removing this point.
+            # Only in this case, treat one step of padding as actual input to avoid implementation problems.
+            samples_without_data = np.sum(~padding_mask, axis=1) == 0
+            padding_mask[samples_without_data, -1] = False
 
         # size: [batch_size, time_steps, obs+action+reward]
         encoder_input = torch.cat(
