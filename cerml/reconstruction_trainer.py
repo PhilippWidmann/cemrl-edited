@@ -27,6 +27,8 @@ class ReconstructionTrainer(nn.Module):
                  lr_encoder,
                  alpha_kl_z,
                  beta_kl_y,
+                 alpha_kl_z_query,
+                 beta_kl_y_query,
                  use_state_diff,
                  component_constraint_learning,
                  state_reconstruction_clip,
@@ -57,6 +59,8 @@ class ReconstructionTrainer(nn.Module):
         self.lr_encoder = lr_encoder
         self.alpha_kl_z = alpha_kl_z
         self.beta_kl_y = beta_kl_y
+        self.alpha_kl_z_query = alpha_kl_z_query
+        self.beta_kl_y_query = beta_kl_y_query
         self.use_state_diff = use_state_diff
         self.component_constraint_learning = component_constraint_learning
         self.state_reconstruction_clip = state_reconstruction_clip
@@ -235,6 +239,12 @@ class ReconstructionTrainer(nn.Module):
 
         # Forward pass through encoder
         y_distribution, z_distributions = self.encoder.encode(encoder_input, mask_enc)
+        if self.alpha_kl_z_query is not None:
+            encoder_input_query, mask_enc_query = \
+                self.replay_buffer.make_encoder_data(data_dec, self.batch_size,
+                                                     padding_mask=mask_dec, exclude_last_timestep=False)
+            y_distribution_query, z_distributions_query = self.encoder.encode(encoder_input_query, mask_enc_query)
+            kl_qz_qz_query = ptu.zeros(self.batch_size, self.num_classes)
 
         kl_qz_pz = ptu.zeros(self.batch_size, self.num_classes)
         state_losses = ptu.zeros(self.batch_size, self.num_classes)
@@ -263,20 +273,27 @@ class ReconstructionTrainer(nn.Module):
             else:
                 nll_px[:, y] = self.loss_weight_reward * reward_loss
 
-
             # KL ( q(z | x,y=k) || p(z|y=k) )
             prior = self.prior_pz(y)
             kl_qz_pz[:, y] = torch.sum(kl.kl_divergence(z_distributions[y], prior), dim=-1)
+            # KL ( q(z | x_decoder) || q(z | x_encoder) )
+            if self.alpha_kl_z_query is not None:
+                kl_qz_qz_query[:, y] = torch.sum(kl.kl_divergence(z_distributions_query[y], z_distributions[y]), dim=-1)
 
         # KL ( q(y | x) || p(y) )
         kl_qy_py = kl.kl_divergence(y_distribution, self.prior_py())
+        # KL ( q(y | x_decoder) || q(y | x_encoder) )
+        if self.alpha_kl_z_query is not None:
+            kl_qy_qy_query = kl.kl_divergence(y_distribution_query, y_distribution)
 
         # Overall ELBO
         if not self.component_constraint_learning:
             elbo = torch.sum(torch.sum(torch.mul(y_distribution.probs,  (-1) * nll_px - self.alpha_kl_z * kl_qz_pz), dim=-1) - self.beta_kl_y * kl_qy_py)
-
+            if self.alpha_kl_z_query is not None:
+                elbo += torch.sum(torch.sum(torch.mul(y_distribution.probs, - self.alpha_kl_z_query * kl_qz_qz_query), dim=-1)
+                                  - self.beta_kl_y_query * kl_qy_qy_query)
         # Component-constraint_learing
-        if self.component_constraint_learning:
+        else:
             temp = ptu.zeros_like(y_distribution.probs)
             true_task_multiplier = temp.scatter(1, ptu.from_numpy(np.array([a["base_task"] for a in true_task[:, 0].tolist()])).unsqueeze(1).long(), 1)
             loss_nll = nn.NLLLoss(reduction='none')

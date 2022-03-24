@@ -213,6 +213,8 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['reconstruction_params']['lr_encoder'],
         variant['reconstruction_params']['alpha_kl_z'],
         variant['reconstruction_params']['beta_kl_y'],
+        variant['reconstruction_params']['alpha_kl_z_query'],
+        variant['reconstruction_params']['beta_kl_y_query'],
         variant['reconstruction_params']['use_state_diff'],
         variant['reconstruction_params']['component_constraint_learning'],
         variant['env_params']['state_reconstruction_clip'],

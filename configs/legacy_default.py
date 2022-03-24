@@ -82,8 +82,10 @@ legacy_default_config = dict(
         num_classes=1,  # number of base classes in the class encoder
         lr_encoder=3e-4,  # learning rate decoder (ADAM) 3e-4 when combine with combination trainer,
         lr_decoder=3e-4,  # learning rate decoder (ADAM) 3e-4 when combine with combination trainer,
-        alpha_kl_z=1e-3,  # weighting factor KL loss of z distribution
-        beta_kl_y=1e-3,  # # weighting factor KL loss of y distribution
+        alpha_kl_z=1e-3,  # weighting factor KL loss of z distribution vs prior
+        beta_kl_y=1e-3,  # # weighting factor KL loss of y distribution vs prior
+        alpha_kl_z_query=None,  # weighting factor KL loss of z distribution (context vs query)
+        beta_kl_y_query=None,  # # weighting factor KL loss of y distribution (context vs query)
         net_complex_enc_dec=10.0,  # determines overall net complextity in encoder and decoder (shared_dim = net_complex_enc_dec * input_dim)
         factor_qf_loss=1.0,  # weighting of state and reward loss compared to Qfunction in combination trainer
         train_val_percent=0.8,  # percentage of train samples vs. validation samples

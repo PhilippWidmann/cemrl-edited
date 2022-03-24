@@ -240,28 +240,29 @@ class StackedReplayBuffer:
 
         return np.array(self._train_indices), np.array(self._val_indices)
 
-    def make_encoder_data(self, data, batch_size, padding_mask=None, mode='multiply'):
+    def make_encoder_data(self, data, batch_size, padding_mask=None, mode='multiply', exclude_last_timestep=True):
         # MLP encoder input: state of last timestep + state, action, reward of all timesteps before
         # input is in form [[t-N], ... [t-1], [t]]
         # therefore set action and reward of last timestep = 0
         # Returns: [batch_size, timesteps, obs+action+reward dim]
         # assumes, that a flat encoder flattens the data itself
 
-        observations = torch.from_numpy(data['observations'])
-        actions = torch.from_numpy(data['actions'])
-        rewards = torch.from_numpy(data['rewards'])
-        next_observations = torch.from_numpy((data['next_observations']))
+        observations_encoder_input = torch.from_numpy(data['observations'])
+        actions_encoder_input = torch.from_numpy(data['actions'])
+        rewards_encoder_input = torch.from_numpy(data['rewards'])
+        next_observations_encoder_input = torch.from_numpy((data['next_observations']))
 
-        observations_encoder_input = observations.detach().clone()[:, :-1, :]
-        actions_encoder_input = actions.detach().clone()[:, :-1, :]
-        rewards_encoder_input = rewards.detach().clone()[:, :-1, :]
-        next_observations_encoder_input = next_observations.detach().clone()[:, :-1, :]
-        if padding_mask is not None:
-            padding_mask = padding_mask[:, :-1]
-            # If we had sampled the very first step of an episode, no data remains after removing this point.
-            # Only in this case, treat one step of padding as actual input to avoid implementation problems.
-            samples_without_data = np.sum(~padding_mask, axis=1) == 0
-            padding_mask[samples_without_data, -1] = False
+        if exclude_last_timestep:
+            observations_encoder_input = observations_encoder_input.detach().clone()[:, :-1, :]
+            actions_encoder_input = actions_encoder_input.detach().clone()[:, :-1, :]
+            rewards_encoder_input = rewards_encoder_input.detach().clone()[:, :-1, :]
+            next_observations_encoder_input = next_observations_encoder_input.detach().clone()[:, :-1, :]
+            if padding_mask is not None:
+                padding_mask = padding_mask[:, :-1]
+                # If we had sampled the very first step of an episode, no data remains after removing this point.
+                # Only in this case, treat one step of padding as actual input to avoid implementation problems.
+                samples_without_data = np.sum(~padding_mask, axis=1) == 0
+                padding_mask[samples_without_data, -1] = False
 
         # size: [batch_size, time_steps, obs+action+reward]
         encoder_input = torch.cat(
