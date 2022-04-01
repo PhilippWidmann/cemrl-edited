@@ -106,7 +106,7 @@ class ReconstructionTrainer(nn.Module):
             lr=self.lr_decoder,
         )
 
-    def train(self, epochs):
+    def train(self, epochs, plot_save_file=None):
         train_indices, val_indices = self.replay_buffer.get_train_val_indices(self.train_val_percent)
 
         if self.data_usage_reconstruction == "tree_sampling":
@@ -188,6 +188,9 @@ class ReconstructionTrainer(nn.Module):
             plt.yscale('log')
             plt.legend()
 
+            plt.tight_layout()
+            if plot_save_file is not None:
+                plt.savefig(plot_save_file, bbox_inches='tight')
             plt.show()
 
         # for logging

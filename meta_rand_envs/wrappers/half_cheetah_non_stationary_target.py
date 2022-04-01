@@ -42,6 +42,12 @@ class HalfCheetahNonStationaryTargetQuadraticRewardWrappedEnv(HalfCheetahNonStat
         HalfCheetahNonStationaryTargetEnv.__init__(self, *args, **kwargs)
 
 
+@register_env('cheetah-stationary-target-quadraticReward-observableAbsGoal')
+class ObservableAbsGoalHalfCheetahNonStationaryTargetQuadraticRewardWrappedEnv(ObservableAbsGoalHalfCheetahNonStationaryTargetQuadraticRewardEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+
+
 @register_env('cheetah-stationary-target-normalizedReward')
 @register_env('cheetah-stationary-target-normalizedReward-allT')
 @register_env('cheetah-stationary-target-normalizedReward-allT-GRU')

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def get_quantity(results, quantity):
     if quantity == 'time':
-        data = list(range(len(results['env_infos'])))
+        data = list(range(len(results['observations'])))
     elif quantity in ['observations', 'next_observations', 'actions', 'rewards', 'task_indicators', 'base_task_indicators',
              'next_task_indicators', 'next_base_task_indicators', 'terminals']:
         data = results[quantity]
