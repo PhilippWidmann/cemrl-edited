@@ -103,6 +103,28 @@ class HalfCheetahNonStationaryTargetQuadraticRewardEnv(HalfCheetahNonStationaryT
         return reward, reward_ctrl, reward_run
 
 
+class HalfCheetahNonStationaryTargetForwardEnv(HalfCheetahNonStationaryTargetQuadraticRewardEnv):
+    def change_active_task(self, *args, **kwargs):
+        # Idea: If the task changes, the target will be further in front,
+        # meaning we don't have to handle going in two directions
+        if self.meta_mode == 'train':
+            self.active_task = np.random.choice(self.train_tasks)['target'] + self.active_task
+        elif self.meta_mode == 'test':
+            self.active_task = np.random.choice(self.test_tasks)['target'] + self.active_task
+        self.recolor()
+
+
+class ObservableAbsGoalHalfCheetahNonStationaryTargetQuadraticRewardEnv(HalfCheetahNonStationaryTargetQuadraticRewardEnv):
+    def _get_obs(self):
+        starting_dist_to_target = abs(self.active_task)
+        return np.concatenate([
+            self.sim.data.qpos.flat[1:],
+            self.get_body_com("torso").flat,
+            self.sim.data.qvel.flat,
+            np.array([starting_dist_to_target])
+        ]).astype(np.float32).flatten()
+
+
 class HalfCheetahNonStationaryTargetQuadraticRewardVariableStartEnv(HalfCheetahNonStationaryTargetQuadraticRewardEnv):
     def __init__(self, *args, **kwargs):
         self.possible_start_positions = kwargs['start_positions']
