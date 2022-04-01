@@ -88,7 +88,7 @@ class NoOpEncoder(nn.Module):
         super().__init__()
         self.latent_dim = 1
 
-    def forward(self, x, return_distributions=False):
+    def forward(self, x, padding_mask=None, return_distributions=False, exclude_padding=False):
         if len(x.shape) == 2:
             first_dim = 1
         else:
@@ -101,8 +101,7 @@ class NoOpEncoder(nn.Module):
             return torch.zeros((first_dim, self.latent_dim), device=x.device), \
                    torch.zeros(first_dim, device=x.device)
 
-
-    def encode(self, x):
+    def encode(self, x, padding_mask=None, exclude_padding=False):
         raise NotImplementedError('encode should not be called on NoOpEncoder')
 
     def sample_z(self, y_distribution, z_distributions, y_usage="specific", y=None, sampler="random"):
@@ -122,7 +121,7 @@ class SpecialOmissionDecoder(DecoderMDP):
         # keep only reward and position
         self.relevant_state_indices = [8]
 
-    def forward(self, state, action, next_state, z):
+    def forward(self, state, action, next_state, z, padding_mask=None):
         return super().forward(state[..., self.relevant_state_indices],
                                torch.zeros(action.shape, device=action.device),
                                None,  # next_state is unused
