@@ -40,6 +40,7 @@ def main():
     rewards = np.array([[-abs(s - t) for s in states] for t in targets])
     plot(states, targets, rewards)
 
+    """
     # learned decoder function
     states = np.linspace(-25, 25, 101)
     targets = np.linspace(-25, 25, 101)
@@ -52,6 +53,7 @@ def main():
             return -abs(abs(s) - t)
     rewards = np.array([[dec(s, t) for s in states] for t in targets])
     plot(states, targets, rewards)
+    """
 
 
 if __name__ == '__main__':

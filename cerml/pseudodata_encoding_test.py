@@ -34,7 +34,7 @@ class PseudodataGenerator:
         self.obs_dim = 1
         self.action_dim = 1
 
-    def generate_episode(self, task_nr, target=None, modify_target=None, target_error=0, error_prob=0.5):
+    def generate_episode(self, task_nr, target=None, modify_target=None, target_error=1.0, error_prob=1.0, mode='random_zigzag', dampen=1):
         states = np.zeros((self.episode_length + 1, self.obs_dim))
         actions = np.zeros((self.episode_length, self.action_dim))
         rewards = np.zeros((self.episode_length, 1))
@@ -45,16 +45,37 @@ class PseudodataGenerator:
             target = self.tasks[task_nr]
             modify_target = True
         true_target = target
+
+        intermediate_target = None
+        final_target = target
         if modify_target:
             if np.random.uniform() <= error_prob:
-                # target = np.random.choice(self.tasks)
-                target = -target
-            target = np.random.uniform(target - target_error, target + target_error)
+                if mode == 'random':
+                    final_target = np.random.choice(self.tasks)
+                elif mode == 'mirror':
+                    final_target = -target
+                elif mode == 'zigzag':
+                    intermediate_target = -target
+                    final_target = target
+                elif mode == 'random_zigzag':
+                    target = np.random.choice(self.tasks)
+                    intermediate_target = -target
+                    final_target = target
+                elif mode == 'realistic':
+                    intermediate_target = np.random.uniform(-7.5, 7.5)
+                    final_target = target
+                else:
+                    raise ValueError('Typo in mode')
+            final_target = dampen * np.random.uniform(final_target - target_error, final_target + target_error)
 
+        target = intermediate_target if intermediate_target is not None else final_target
         for i in range(self.episode_length):
             actions[i] = self._generate_actions(states[i], target)
             states[i + 1] = self._generate_state(states[i], actions[i], target)
             rewards[i] = self._generate_reward(states[i], actions[i], states[i + 1], true_target)
+            if (intermediate_target is not None) and (abs(states[i+1] - intermediate_target) <= 0.01):
+                target = final_target
+                intermediate_target = None
 
         episode = {
             'observations': states[:-1],
@@ -72,11 +93,11 @@ class PseudodataGenerator:
         }
         return episode
 
-    def _generate_state(self, state, action, target):
+    def _generate_state(self, state, action, target, itr_to_target=75):
         if target >= 0:
-            next_state = min(state[0] + self.tasks[-1] / 100, target)
+            next_state = min(state[0] + self.tasks[-1] / itr_to_target, target)
         else:
-            next_state = max(state[0] + self.tasks[0] / 100, target)
+            next_state = max(state[0] + self.tasks[0] / itr_to_target, target)
         return next_state
 
     def _generate_actions(self, state, target):
@@ -350,7 +371,7 @@ def main(config):
     variant['util_params']['temp_dir'] = os.path.join('..', '.temp_cemrl', 'pseudodata')
 
     variant['reconstruction_params']['use_next_state_for_reward_decoder'] = False
-    variant['reconstruction_params']['early_stopping_threshold'] = 1000
+    variant['reconstruction_params']['early_stopping_threshold'] = 2500
     variant['reconstruction_params']['net_complex_enc_dec'] = 10 * variant['reconstruction_params'][
         'net_complex_enc_dec']
 
@@ -395,13 +416,15 @@ def main(config):
                                     modify_target=True,
                                     save_dir=experiment_log_dir, save_name='latent-encodings-wrong-trajectory.png')
 
-    z_min = min(z_min, z_min_2)
-    z_max = max(z_max, z_max_2)
+    z_min_2 = min(z_min, z_min_2)
+    z_max_2 = max(z_max, z_max_2)
 
     # visualize decoder capability showing the function learned for a particular z
     print('Plotting decoder')
     plot_decoder(replay_buffer, decoder, z_min, z_max,
                  save_dir=experiment_log_dir, save_name='decoder-functions.png')
+    plot_decoder(replay_buffer, decoder, z_min_2, z_max_2,
+                 save_dir=experiment_log_dir, save_name='decoder-functions-all.png')
 
 
 if __name__ == '__main__':
