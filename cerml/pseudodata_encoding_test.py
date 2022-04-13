@@ -18,7 +18,7 @@ from configs.default import default_config
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.core import logger
 import rlkit.torch.pytorch_util as ptu
-from runner import deep_update_dict
+from philipp_runner import deep_update_dict
 
 
 class PseudodataGenerator:

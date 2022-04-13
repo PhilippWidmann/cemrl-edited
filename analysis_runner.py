@@ -18,7 +18,7 @@ from analysis.plot_episode import plot_per_episode, get_plot_specification
 import configs.legacy_default
 import configs.analysis_config
 
-from runner import setup_environment, initialize_networks, load_networks
+from philipp_runner import setup_environment, initialize_networks, load_networks
 
 plt.rcParams.update({'font.size': 20})
 
