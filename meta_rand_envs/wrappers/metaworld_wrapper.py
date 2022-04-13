@@ -8,6 +8,7 @@ from . import register_env
 @register_env('metaworld-ml1-reach-observable')
 @register_env('metaworld-ml1-reach-line')
 @register_env('metaworld-ml1-reach-line-action-restricted')
+@register_env('metaworld-ml1-reach-line-action-restricted-distReward')
 @register_env('metaworld-ml1-reach-plane')
 @register_env('metaworld-ml1-reach-plane-action-restricted')
 @register_env('metaworld-ml1-reach-line-observable')

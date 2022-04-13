@@ -81,6 +81,13 @@ class SawyerReachEnvV2LineRestricted(SawyerReachEnvV2Line):
         return super().step(full_action)
 
 
+class SawyerReachEnvV2LineRestrictedDistReward(SawyerReachEnvV2LineRestricted):
+    # Overwrite the complicated reward function and use negative distance instead
+    def compute_reward(self, actions, obs):
+        _, dist, in_place = super().compute_reward(actions, obs)
+        return -dist, dist, in_place
+
+
 # Environment where the goal only lies on a halfline to the right from the initial position
 class SawyerReachEnvV2Halfline(SawyerReachEnvV2AlternateGoal):
     def __init__(self):
@@ -167,6 +174,7 @@ class SawyerReachEnvV2PlaneRestricted(SawyerReachEnvV2Plane):
 REACH_ENV_DICT = {
     "reach-v2-line": SawyerReachEnvV2Line,
     "reach-v2-line-action-restricted": SawyerReachEnvV2LineRestricted,
+    "reach-v2-line-action-restricted-distReward": SawyerReachEnvV2LineRestrictedDistReward,
     "reach-v2-plane": SawyerReachEnvV2Plane,
     "reach-v2-plane-action-restricted": SawyerReachEnvV2PlaneRestricted,
     "reach-v2-halfline": SawyerReachEnvV2Halfline,

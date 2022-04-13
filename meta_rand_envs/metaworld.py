@@ -118,7 +118,12 @@ class MetaWorldEnv(MetaEnvironment):
 
     def step(self, action):
         ob, reward, done, info = self.metaworld_env.step(action)
-        info['true_task'] = dict(base_task=self.name2number[self.active_env_name], specification=self.metaworld_env._target_pos.sum(), target=self.metaworld_env._target_pos)
+        info['true_task'] = dict(base_task=self.name2number[self.active_env_name],
+                                 specification=self.metaworld_env._target_pos.sum(),
+                                 target=self.metaworld_env._target_pos,
+                                 target_x=self.metaworld_env._target_pos[0])
+        info['pos'] = self.metaworld_env.tcp_center
+        info['pos_x'] = self.metaworld_env.tcp_center[0]
         return ob.astype(np.float32), reward, done, info
 
     def reset(self):
