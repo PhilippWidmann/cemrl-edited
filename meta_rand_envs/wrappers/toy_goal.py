@@ -6,6 +6,8 @@ from . import register_env
 
 
 @register_env('toy-goal')
+@register_env('toy-goal-halfline')
+@register_env('toy-goal-line')
 class ToyGoalEnv(Env):
 
     def __init__(self, *args, **kwargs):
@@ -87,7 +89,7 @@ class ToyGoalEnv(Env):
     # renamed from _step
     def step(self, action):
         if self.goal_1d:
-            act = np.zeros_like(action)
+            act = np.zeros_like(self._state)
             act[0] = action[0]
             action = act
         # with some probability change goal direction
@@ -122,13 +124,13 @@ class ToyGoalEnv(Env):
             return ob, reward, done, dict(true_task=dict(base_task=0, specification=self.goal['goal'][0]),
             # np.array([self.goal['goal'][0], self.goal['goal'][1], self.goal['angle'], self.goal['radius']])), TODO enable specification of higher dimension
                                           success=bool(np.linalg.norm(self._state[0] - self.goal['goal'][0]) < self.goal_radius),
-                                          achieved_spec=self._state[0])
+                                          pos=self._state[0])
         else:
             return ob, reward, done, dict(true_task=dict(base_task=0, specification=self.goal['goal']),
                                           # np.array([self.goal['goal'][0], self.goal['goal'][1], self.goal['angle'], self.goal['radius']])), TODO enable specification of higher dimension
                                           success=bool(
                                               np.linalg.norm(self._state - self.goal['goal']) < self.goal_radius),
-                                          achieved_spec=self._state)
+                                          pos=self._state)
 
     def _get_obs(self):
         return np.copy(self._state[0:1] if self.goal_1d else self._state)# / (self.task_goal_offset + self.task_max_radius)
@@ -150,8 +152,8 @@ class ToyGoalEnv(Env):
         # to finish
         # reward += self.reward_radius
         #print(self.max_distance, self.task_goal_offset, self.reward_radius, self.task_goal_offset == 0)
-        reward /= self.max_distance if self.task_goal_offset == 0 else self.reward_radius
-        reward += 1
+        # reward /= self.max_distance if self.task_goal_offset == 0 else self.reward_radius
+        # reward += 1
 
         # if np.any(reward < 0) or np.any(reward > 1):
         #     print("Reward out of range:", reward, y, x, y_goal, x_goal, dist, self.reward_radius, self.task_goal_offset)
@@ -288,7 +290,7 @@ class ToyGoalEnv(Env):
         if self.positive_environment:
             goals += self.task_goal_offset + self.task_max_radius # + 1
         if self.one_side_goals:
-            goals = np.stack((np.abs(goals[:, 0]), goals[:, 0]), axis=1)
+            goals = np.stack((np.abs(goals[:, 0]), goals[:, 1]), axis=1)
         goals += self.distribution_shift
         # if self.goal_1d:
         #     goals = goals[:, 0][:, None]
