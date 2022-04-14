@@ -50,6 +50,7 @@ def analysis(variant):
     # showcase learned policy loaded
     showcase_itr = variant['showcase_itr']
     example_cases = variant['analysis_params']['example_cases']
+    train_example_cases = variant['analysis_params']['train_example_cases']
     path_to_folder = variant['path_to_weights']
 
     save = variant['analysis_params']['save']
@@ -71,11 +72,15 @@ def analysis(variant):
     if variant['analysis_params']['plot_encoding']:
         plot_encodings_split(showcase_itr, path_to_folder, save=save, save_dir=variant['save_dir'], save_prefix=variant['save_prefix'])
 
-    results_dict = {}
+    results_dict = {'train': {}, 'test': {}}
     for example_case in example_cases:
         results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
                 deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True)
-        results_dict[example_case] = results[0][0][0][0]
+        results_dict['test'][example_case] = results[0][0][0][0]
+    for train_example_case in train_example_cases:
+        results = rollout_coordinator.collect_data(train_tasks[train_example_case:train_example_case + 1], 'test',
+                deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True)
+        results_dict['train'][train_example_case] = results[0][0][0][0]
 
     if False:
         plt.plot(list(range(200)), results_dict[7]['task_indicators'][:, 0])
@@ -90,44 +95,49 @@ def analysis(variant):
             plt.suptitle(f'Actions {i}')
             plt.show()
 
-    for plot_spec in variant['analysis_params']['single_episode_plots']:
-        plot_spec_dict = get_plot_specification(plot_spec)
-        for example_case in example_cases:
+    # Do separate plots for train and test cases
+    for type in results_dict.keys():
+        cases = example_cases if type == 'test' else train_example_cases
+        if not cases:
+            continue
+        for plot_spec in variant['analysis_params']['single_episode_plots']:
+            plot_spec_dict = get_plot_specification(plot_spec)
+            for case in cases:
+                fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
+                for i, ax in enumerate(axes.flat):
+                    p = plot_spec_dict[i]
+                    fig, ax = plot_per_episode(results_dict[type][case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
+
+                fig.tight_layout()
+                all_figures.append((fig, axes))
+                if save:
+                    save_name = variant['save_prefix'] + type + 'task_' + \
+                                'itr-' + str(showcase_itr) + '_' + \
+                                'case-' + str(case) + '_' + \
+                                str(plot_spec) + '.png'
+                    fig.tight_layout()
+                    fig.savefig(os.path.join(save_dir, save_name), bbox_inches='tight')
+                if show:
+                    fig.show()
+
+        for plot_spec in variant['analysis_params']['multiple_episode_plots']:
+            plot_spec_dict = get_plot_specification(plot_spec)
             fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
-            for i, ax in enumerate(axes.flat):
-                p = plot_spec_dict[i]
-                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
+            for case in cases:
+                for i, ax in enumerate(axes.flat):
+                    p = plot_spec_dict[i]
+                    fig, ax = plot_per_episode(results_dict[type][case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
 
             fig.tight_layout()
             all_figures.append((fig, axes))
             if save:
-                save_name = variant['save_prefix'] + \
+                save_name = variant['save_prefix'] + type + 'task_' + \
                             'itr-' + str(showcase_itr) + '_' + \
-                            'testcase-' + str(example_case) + '_' + \
+                            'case-' + str(cases) + '_' + \
                             str(plot_spec) + '.png'
-                fig.tight_layout()
-                fig.savefig(os.path.join(save_dir, save_name), bbox_inches='tight')
+                fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
             if show:
                 fig.show()
-
-    for plot_spec in variant['analysis_params']['multiple_episode_plots']:
-        plot_spec_dict = get_plot_specification(plot_spec)
-        fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
-        for example_case in example_cases:
-            for i, ax in enumerate(axes.flat):
-                p = plot_spec_dict[i]
-                fig, ax = plot_per_episode(results_dict[example_case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
-
-        fig.tight_layout()
-        all_figures.append((fig, axes))
-        if save:
-            save_name = variant['save_prefix'] + \
-                        'itr-' + str(showcase_itr) + '_' + \
-                        'testcase-' + str(example_cases) + '_' + \
-                        str(plot_spec) + '.png'
-            fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
-        if show:
-            fig.show()
 
     if len(all_figures) == 1:
         return all_figures[0]

@@ -1,7 +1,7 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='./output/cheetah-non-stationary-target-forward/2022_03_30_23_38_06',  # CONFIGURE! path to experiment folder
-    save_dir='./output_analysis/cheetah-non-stationary-target-forward/2022_03_30_23_38_06',
+    path_to_weights='./output/metaworld-ml1-reach-line-action-restricted-distReward/2022_04_14_00_17_25',  # CONFIGURE! path to experiment folder
+    save_dir='./output_analysis/metaworld-ml1-reach-line-action-restricted-distReward/2022_04_14_00_17_25',
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
     showcase_itr=[0, 10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500],  # CONFIGURE! epoch for which analysis is performed
     util_params=dict(
@@ -14,10 +14,10 @@ analysis_config = dict(
         plot=False  # plot figures of progress for reconstruction and policy training
     ),
     analysis_params=dict(
-        train_example_cases=[],
+        train_example_cases=[6, 7, 8, 9, 24],
         example_cases=[6, 7, 8, 9, 24],  # [9, 3, 7, 1, 14, 15],  # [7, 9],  # CONFIGURE! choose an array of test tasks
         single_episode_plots=[],
-        multiple_episode_plots=[['time_vs_task_indicators_fill_z_stds', 'time_vs_rewards', 'time_vs_pos_const_specification'],],
+        multiple_episode_plots=[['time_vs_task_indicators_fill_z_stds', 'time_vs_rewards', 'time_vs_pos_x_const_target_x'],],
         log_and_plot_progress=False,  # CONFIGURE! If True: experiment will be logged to the experiment_database.json and plotted, If already logged: plot only
         save=True,  # CONFIGURE! If True: plots of following options will be saved to the experiment folder
         show=False,

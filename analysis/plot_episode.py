@@ -9,7 +9,7 @@ def get_quantity(results, quantity):
     elif quantity in ['observations', 'next_observations', 'actions', 'rewards', 'task_indicators', 'base_task_indicators',
              'next_task_indicators', 'next_base_task_indicators', 'terminals']:
         data = results[quantity]
-    elif quantity in ['base_task', 'specification']:
+    elif quantity in results['true_tasks'][0, 0].keys():
         data = [a[0][quantity] for a in results['true_tasks']]
     elif quantity in results['env_infos'][0].keys():
         data = [a[quantity] for a in results['env_infos']]
