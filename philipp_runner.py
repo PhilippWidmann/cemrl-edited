@@ -181,9 +181,8 @@ def initialize_networks(variant, env, experiment_log_dir):
     if variant['algo_params']['exploration_agent'] is not None:
         exploration_agent = construct_exploration_agent(
             variant['algo_params']['exploration_agent'],
-            encoder,
-            prior_pz,
             policy_networks,
+            replay_buffer
         )
     else:
         exploration_agent = agent

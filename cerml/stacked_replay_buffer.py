@@ -48,6 +48,7 @@ class StackedReplayBuffer:
         # can be sampled
         self._allowed_points = np.zeros(max_replay_buffer_size, dtype=np.bool)
         self._first_timestep = -np.ones(max_replay_buffer_size, dtype=np.int)
+        self._exploration_trajectory = np.zeros(max_replay_buffer_size, dtype=np.bool)
 
         self._train_indices = []
         self._val_indices = []
@@ -88,6 +89,7 @@ class StackedReplayBuffer:
         # Update allowed points with new indices
         self._allowed_points[indices_list] = True
         self._first_timestep[indices_list] = self._top
+        self._exploration_trajectory[indices_list] = [episode['agent_infos'][i]['exploration_trajectory'] for i in range(len(indices_list))]
         # Reset start for next episode in buffer in case we overwrite the start
         next_index = (indices_list[-1] + 1) % self._max_replay_buffer_size
         if -1 < self._first_timestep[next_index]:
@@ -297,6 +299,15 @@ class StackedReplayBuffer:
             stats_dict[key]["mean"] = values_dict[key].mean(axis=0)
             stats_dict[key]["std"] = values_dict[key].std(axis=0)
         return stats_dict
+
+    def sample_task_indicator(self):
+        index_possible = ~self._exploration_trajectory & self._allowed_points
+        if np.sum(index_possible) != 0:
+            index = np.random.choice(range(self._max_replay_buffer_size), p=index_possible/index_possible.sum())
+        else:
+            index = 0
+        return ptu.from_numpy(self._task_indicators[np.newaxis, index]), \
+               ptu.from_numpy(self._base_task_indicators[np.newaxis, index])
 
     def normalize_data(self, data):
         for key in self.stats_dict.keys():

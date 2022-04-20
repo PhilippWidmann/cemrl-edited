@@ -253,6 +253,7 @@ class RolloutWorker:
         o = self.env.reset()
         next_o = None
         path_length = 0
+        agent_info = {}
 
         #debug
         #true_task = torch.tensor([[1.0]])
@@ -262,7 +263,8 @@ class RolloutWorker:
         while path_length < max_path_length:
             o_input, agent_input, padding_mask = self.build_encoder_input(o, self.context, self.padding_mask)
             out = self.agent.get_action(agent_input, o_input, input_padding=padding_mask, deterministic=deterministic,
-                                        z_debug=None, env=self.env, return_distributions=return_distributions)
+                                        z_debug=None, env=self.env, return_distributions=return_distributions,
+                                        agent_info=agent_info)
             a = out[0]
             agent_info = out[1]
             task_indicator = out[2]
@@ -295,7 +297,7 @@ class RolloutWorker:
 
         next_o_input, agent_input, paddings_mask = self.build_encoder_input(next_o, self.context, self.padding_mask)
         _, _, next_task_indicator, next_base_task_indicator, *_ = \
-            self.agent.get_action(agent_input, next_o_input, input_padding=padding_mask, deterministic=deterministic, env=self.env)
+            self.agent.get_action(agent_input, next_o_input, input_padding=padding_mask, deterministic=deterministic, env=self.env, agent_info=agent_info)
         actions = np.array(actions)
         if len(actions.shape) == 1:
             actions = np.expand_dims(actions, 1)

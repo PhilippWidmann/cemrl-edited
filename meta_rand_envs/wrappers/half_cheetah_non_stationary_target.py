@@ -15,7 +15,7 @@ from . import register_env
 @register_env('cheetah-stationary-target-allT-noActions')
 @register_env('cheetah-stationary-target-allT-specialInput')
 @register_env('cheetah-stationary-target-allT')
-@register_env('cheetah-stationary-targetTwosided-allT')
+@register_env('cheetah-stationary-targetTwosided')
 @register_env('cheetah-stationary-targetTwosided-allT-GRU')
 @register_env('cheetah-stationary-targetTwosided-allT-FCN')
 @register_env('cheetah-stationary-targetTwosided-allT-Conv')

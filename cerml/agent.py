@@ -17,7 +17,8 @@ class CEMRLAgent(nn.Module):
         self.prior_pz = prior_pz
         self.policy = policy
 
-    def get_action(self, encoder_input, state, input_padding=None, deterministic=False, z_debug=None, env=None, return_distributions=False):
+    def get_action(self, encoder_input, state, input_padding=None, deterministic=False, z_debug=None, env=None,
+                   return_distributions=False, agent_info=None):
         state = ptu.from_numpy(state).view(1, -1)
         if return_distributions:
             z, y, distribution = self.encoder(encoder_input, return_distributions=return_distributions, padding_mask=input_padding)
