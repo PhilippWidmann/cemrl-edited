@@ -38,6 +38,7 @@ class CEMRLAlgorithm:
                  num_showcase_non_deterministic,
                  use_relabeler,
                  use_combination_trainer,
+                 use_exploration_agent,
                  experiment_log_dir,
                  latent_dim,
 
@@ -64,6 +65,7 @@ class CEMRLAlgorithm:
         self.num_eval_trajectories = num_eval_trajectories
         self.use_relabeler = use_relabeler
         self.use_combination_trainer = use_combination_trainer
+        self.use_exploration_agent = use_exploration_agent
         self.experiment_log_dir = experiment_log_dir
         self.latent_dim = latent_dim
 
@@ -83,7 +85,7 @@ class CEMRLAlgorithm:
 
         print("Collecting initial samples ...")
         if self.num_transitions_initial > 0:
-            self._n_env_steps_total += self.rollout_coordinator.collect_replay_data(self.train_tasks, max_samples=self.num_transitions_initial)
+            self._n_env_steps_total += self.rollout_coordinator.collect_replay_data(self.train_tasks, use_exploration_agent=self.use_exploration_agent, max_samples=self.num_transitions_initial)
 
         for epoch in gt.timed_for(range(self.num_epochs), save_itrs=True):
             tabular_statistics = OrderedDict()
@@ -92,6 +94,8 @@ class CEMRLAlgorithm:
             print("Collecting samples ...")
             data_collection_tasks = np.random.permutation(self.train_tasks)[:self.num_train_tasks_per_episode]
             self._n_env_steps_total += self.rollout_coordinator.collect_replay_data(data_collection_tasks, max_samples=self.num_transitions_per_episode)
+            if self.use_exploration_agent:
+                self._n_env_steps_total += self.rollout_coordinator.collect_replay_data(data_collection_tasks, use_exploration_agent=True, max_samples=self.num_transitions_per_episode)
             tabular_statistics['n_env_steps_total'] = self._n_env_steps_total
             gt.stamp('data_collection')
 

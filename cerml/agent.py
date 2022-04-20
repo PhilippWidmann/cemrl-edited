@@ -26,6 +26,7 @@ class CEMRLAgent(nn.Module):
         if z_debug is not None:
             z = z_debug
         a, a_info = self.policy.get_action(state, z, y, deterministic=deterministic)
+        a_info['exploration_trajectory'] = False
         if return_distributions:
             a_info['latent_distribution'] = distribution
         return a, a_info, \

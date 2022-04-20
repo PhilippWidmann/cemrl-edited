@@ -21,6 +21,7 @@ class RolloutCoordinator:
                  env_args,
                  train_or_showcase,
                  agent,
+                 exploration_agent,
                  replay_buffer,
                  time_steps,
                  max_path_length,
@@ -38,6 +39,7 @@ class RolloutCoordinator:
         self.env_args = env_args
         self.train_or_showcase = train_or_showcase
         self.agent = agent
+        self.exploration_agent = exploration_agent
         self.replay_buffer = replay_buffer
         self.time_steps = time_steps
         self.max_path_length = max_path_length
@@ -60,7 +62,8 @@ class RolloutCoordinator:
                 # driver_object_store_memory=1000 * 1024 * 1024
             )
 
-    def collect_data(self, tasks, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
+    def collect_data(self, tasks, train_test, use_exploration_agent=False, deterministic=False, max_samples=np.inf,
+                     max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
         """
         Distribute tasks over workers
         :return: Trajectories as a list of list of list (workers, tasks, (path_dict, num_env_steps))
@@ -73,13 +76,14 @@ class RolloutCoordinator:
             tasks_per_worker[counter].append(task)
             counter += 1
 
+        current_agent = self.exploration_agent if use_exploration_agent else self.agent
         if self.use_multiprocessing:
             # put on cpu before starting ray
             self.agent.to('cpu')
             self.agent.policy.to('cpu')#, 'policy')
             self.agent.encoder.to('cpu')
             workers = [RemoteRolloutWorker.remote(None, self.env_name, self.env_args, self.train_or_showcase,
-                                                  self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
+                                                  current_agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
                                                   self.use_multiprocessing, self.use_data_normalization, self.use_sac_data_normalization, self.replay_buffer.stats_dict,
                                                   task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = ray.get([worker.obtain_samples_from_list.remote(train_test,
@@ -87,7 +91,7 @@ class RolloutCoordinator:
                 save_frames=save_frames, return_distributions=return_distributions) for worker in workers])
         else:
             workers = [RolloutWorker(self.env, self.env_name, self.env_args, self.train_or_showcase,
-                                     self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
+                                     current_agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
                                      self.use_multiprocessing, self.use_data_normalization, self.use_sac_data_normalization, self.replay_buffer.stats_dict,
                                      task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks) for task_list in tasks_per_worker]
             results = [[worker.obtain_samples(task, train_test,
@@ -100,7 +104,7 @@ class RolloutCoordinator:
         self.agent.encoder.to(ptu.device)
         return results
 
-    def collect_replay_data(self, tasks, max_samples=np.inf):
+    def collect_replay_data(self, tasks, use_exploration_agent=False, max_samples=np.inf):
         """
         Run episodes on the environment and store the trajectories in the replay buffer
         :param tasks: List of tasks to run
@@ -108,7 +112,8 @@ class RolloutCoordinator:
         :return: Number of environment steps executed
         """
         num_env_steps = 0
-        results = self.collect_data(tasks, 'train', deterministic=False, max_samples=max_samples, animated=False)
+        results = self.collect_data(tasks, 'train', use_exploration_agent=use_exploration_agent,
+                                    deterministic=False, max_samples=max_samples, animated=False)
         for worker in results:
             for task in worker:
                 for path in task[0]:
@@ -116,8 +121,9 @@ class RolloutCoordinator:
                 num_env_steps += task[1]
         return num_env_steps
 
-    def evaluate(self, train_test, tasks, num_eval_trajectories, deterministic=True, animated=False, save_frames=False, log=True):
-        results = self.collect_data(tasks, 'train_test', deterministic=deterministic, max_trajs=num_eval_trajectories, animated=animated, save_frames=save_frames)
+    def evaluate(self, train_test, tasks, num_eval_trajectories, use_exploration_agent=False, deterministic=True, animated=False, save_frames=False, log=True):
+        results = self.collect_data(tasks, 'train_test', use_exploration_agent=use_exploration_agent, deterministic=deterministic, max_trajs=num_eval_trajectories,
+                                    animated=animated, save_frames=save_frames)
         eval_statistics = OrderedDict()
         if log:
             deterministic_string = '_deterministic' if deterministic else '_non_deterministic'

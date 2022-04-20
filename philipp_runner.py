@@ -8,6 +8,7 @@ import torch
 import gym
 
 from cerml.debug_encoding import EncodingDebugger
+from cerml.exploration_agent import construct_exploration_agent
 
 gym.logger.set_level(40)
 
@@ -177,6 +178,15 @@ def initialize_networks(variant, env, experiment_log_dir):
         prior_pz,
         policy_networks
     )
+    if variant['algo_params']['exploration_agent'] is not None:
+        exploration_agent = construct_exploration_agent(
+            variant['algo_params']['exploration_agent'],
+            encoder,
+            prior_pz,
+            policy_networks,
+        )
+    else:
+        exploration_agent = agent
 
     # Rollout Coordinator
     rollout_coordinator = RolloutCoordinator(
@@ -185,6 +195,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['env_params'],
         variant['train_or_showcase'],
         agent,
+        exploration_agent,
         replay_buffer,
         time_steps,
 
@@ -347,6 +358,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['num_showcase_non_deterministic'],
         variant['algo_params']['use_relabeler'],
         variant['algo_params']['use_combination_trainer'],
+        variant['algo_params']['exploration_agent'] is not None,
         experiment_log_dir,
         latent_dim,
         encoding_debugger,
@@ -388,7 +400,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/debug-cheetah.json")
+@click.argument('config', default="configs/toy-goal/toy-goal-line.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
