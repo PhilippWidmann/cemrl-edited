@@ -4,3 +4,6 @@
 [submodule "submodules/metaworld"]
 	path = submodules/metaworld
 	url = git@github.com:rlworkgroup/metaworld.git
+[submodule "submodules/url_benchmark"]
+	path = submodules/url_benchmark
+	url = git@github.com:PhilippWidmann/url_benchmark.git
