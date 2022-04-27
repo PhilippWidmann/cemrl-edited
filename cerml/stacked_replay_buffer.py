@@ -161,6 +161,7 @@ class StackedReplayBuffer:
             all_indices = points[:, np.newaxis] + np.arange(*self.decoder_time_window)[np.newaxis, :]
         else:
             raise ValueError(f'step_mode={step_mode} is unknown. This should not happen and is probably a bug.')
+        all_indices = all_indices % self._max_replay_buffer_size
 
         padding_mask = (self._first_timestep[all_indices] != self._first_timestep[points][:, np.newaxis])
         if step_mode == 'decoder' and self.decoder_full_episode_window:
