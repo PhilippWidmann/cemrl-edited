@@ -21,6 +21,7 @@ class ToyGoalEnv(Env):
         self.task_max_radius = kwargs.get('task_max_radius', 1.0)
         self.task_goal_offset = kwargs.get('task_goal_offset', 0.0)
         # Reward given in a circle of the size of one quadrant by default
+        self.exploration_reward = kwargs.get('exploration_reward', False)
         self.reward_radius = kwargs.get('reward_radius', (self.task_max_radius - self.task_goal_offset) / 2)
         self.goal_radius = kwargs.get('goal_radius', 0.05)
         self.step_size = kwargs.get('step_size', 0.1)
@@ -143,10 +144,10 @@ class ToyGoalEnv(Env):
         # Dense reward for task_goal_offset 0
         # -reward_radius very important (otherwise, goal avoidance would be better)
         # reward = -self.reward_radius if self.task_goal_offset != 0 and dist > self.reward_radius else -dist
-        if self.task_goal_offset != 0:
-            reward = np.maximum(-dist, -self.reward_radius)
-        else:
-            reward = -dist
+        # if self.task_goal_offset != 0:
+        #     reward = np.maximum(-dist, -self.reward_radius)
+        # else:
+        reward = -dist
         # if self.task_goal_offset != 0:  # Not done for dense reward for chart comprehensibility
         # May not be done if early termination for goal reaching happens as positive reward gives incentive NOT
         # to finish
@@ -160,7 +161,11 @@ class ToyGoalEnv(Env):
         return reward
 
     def _get_reward_at(self, y, x):
-        return self._get_reward_at_with_goals(y, x, self.goal['goal'][0], self.goal['goal'][1])
+        if self.exploration_reward:
+            # Use the distance to starting point as exploration evaluation reward (only used in exploration agent)
+            return - self._get_reward_at_with_goals(y, x, 0, 0)
+        else:
+            return self._get_reward_at_with_goals(y, x, self.goal['goal'][0], self.goal['goal'][1])
 
     def get_all_task_rewards(self, ys, xs):
         assert ys.shape[0] == len(self.tasks) == xs.shape[0] and ys.ndim == 1 == xs.ndim

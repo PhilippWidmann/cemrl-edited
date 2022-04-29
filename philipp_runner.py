@@ -182,7 +182,11 @@ def initialize_networks(variant, env, experiment_log_dir):
         exploration_agent = construct_exploration_agent(
             variant['algo_params']['exploration_agent'],
             policy_networks,
-            replay_buffer
+            replay_buffer,
+            variant['env_name'],
+            variant['env_params'],
+            experiment_log_dir,
+            variant['algo_params']['max_path_length'],
         )
     else:
         exploration_agent = agent
