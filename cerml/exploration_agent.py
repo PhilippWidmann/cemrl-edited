@@ -1,3 +1,4 @@
+import copy
 import os.path
 import warnings
 import numpy as np
@@ -14,7 +15,7 @@ from rlkit.torch.core import np_ify
 
 import sys
 sys.path.append("submodules/url_benchmark")
-from submodules.url_benchmark.pretrain import pretrain_model
+from submodules.url_benchmark.pretrain import generate_model
 from submodules.url_benchmark.dmc import ExtendedTimeStep
 
 from meta_rand_envs.wrappers import ENVS
@@ -27,7 +28,8 @@ def construct_exploration_agent(exploration_type,
                                 env_name,
                                 env_args,
                                 experiment_log_dir,
-                                max_timesteps):
+                                max_timesteps,
+                                exploration_pretraining_steps):
     if exploration_type == 'counterfactual_task':
         return CounterfactualTaskExplorationAgent(policy,
                                                   replay_buffer)
@@ -39,7 +41,7 @@ def construct_exploration_agent(exploration_type,
         else:
             warnings.warn('Specific URLB agent unspecified or not understood. Defaulting to "rnd"')
             agent_type = 'rnd'
-        return URLBAgent(env_name, env_args, agent_type, experiment_log_dir, max_timesteps)
+        return URLBAgent(env_name, env_args, agent_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps)
     else:
         return ToyGoalExplorationAgent(exploration_type,
                                        zigzag_max=25,
@@ -66,9 +68,7 @@ class CounterfactualTaskExplorationAgent(nn.Module):
         a, a_info = self.policy.get_action(state, z, y, deterministic=deterministic)
         a_info['counterfactual_task'] = (z, y)
         a_info['exploration_trajectory'] = True
-        return a, a_info, \
-               np_ify(z.clone().detach())[0, :], \
-               np_ify(y.clone().detach())[0]
+        return a, a_info, np.array([None]), None
 
 
 class ToyGoalExplorationAgent(nn.Module):
@@ -108,7 +108,7 @@ class ToyGoalExplorationAgent(nn.Module):
             raise NotImplementedError(f'Unknown exploration type {self.exploration_type}')
 
         action_info = {'exploration_trajectory': True}
-        return np.array([action]), action_info, np.array([0.0]), np.array(0)
+        return np.array([action]), action_info, np.array([None]), None
 
 
 class URLBAgent(nn.Module):
@@ -117,15 +117,18 @@ class URLBAgent(nn.Module):
                  env_args,
                  agent_type,
                  experiment_log_dir,
-                 max_timesteps
+                 max_timesteps,
+                 pretraining_steps
                  ):
         super().__init__()
         self.agent_type = agent_type
+        self.pretraining_steps = pretraining_steps
 
         self.workdir = os.path.join(experiment_log_dir, 'exploration')
         if not os.path.exists(self.workdir):
             os.makedirs(self.workdir)
 
+        env_args = copy.deepcopy(env_args)
         env_args['exploration_reward'] = True
         env = ENVS[env_name](**env_args)
         if env_args['use_normalized_env']:
@@ -139,8 +142,18 @@ class URLBAgent(nn.Module):
 
         cfg_override = [f'agent={self.agent_type}',
                         f'save_video=false',
-                        'num_train_frames=10000']
-        self.workspace = pretrain_model(self.train_env, self.eval_env, cfg_override, self.workdir)
+                        f'num_train_frames={pretraining_steps+1}',
+                        f'snapshots={[pretraining_steps]}',
+                        f'snapshot_dir="."']
+        print('Initializing exploration agent')
+        self.workspace, self.trained = generate_model(self.train_env, self.eval_env, cfg_override, self.workdir, snapshot_itr=pretraining_steps)
+        if self.trained:
+            print('Loaded exploration agent from file')
+        else:
+            print("Pretraining exploration agent")
+            self.workspace.train()
+            self.trained = True
+            print("Finished exploration agent pretraining")
 
     def get_action(self, encoder_input, state, input_padding=None, deterministic=False, z_debug=None, env=None,
                    return_distributions=False, agent_info=None):
@@ -157,7 +170,7 @@ class URLBAgent(nn.Module):
         # meta info changes only periodically for all agents (e.g. choosing a new random skill in DIAYN)
         # since we init meta at the start of each episode, do not have to update it here
         agent_info = {'meta': meta, 'exploration_trajectory': True}
-        return action, agent_info, np.array([0.0]), np.array(0)
+        return action, agent_info, np.array([None]), None#np.array([0.0]), np.array(0)
 
     class URLBEnvWrapper(dm_env.Environment):
         def __init__(self, env, max_timesteps):

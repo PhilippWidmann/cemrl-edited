@@ -8,6 +8,8 @@ from meta_rand_envs.base import NonStationaryGoalTargetEnv
 class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, utils.EzPickle):
     def __init__(self, *args, **kwargs):
         self.termination_possible = kwargs.get('termination_possible', False)
+        # For debugging the exploration agent only
+        self.exploration_reward = kwargs.get('exploration_reward', False)
         NonStationaryGoalTargetEnv.__init__(self, *args, **kwargs)
         MujocoEnv.__init__(self, 'half_cheetah.xml', 5)
         utils.EzPickle.__init__(self)
@@ -19,11 +21,14 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         self.tasks = self.train_tasks + self.test_tasks
 
     def _compute_reward(self, action, xposafter):
-        vector_to_target = self.active_task - xposafter
-        reward_run = -1.0 * abs(vector_to_target)
-        reward_ctrl = -0.5 * 1e-1 * np.sum(np.square(action))
-        reward = reward_ctrl + reward_run
-        return reward, reward_ctrl, reward_run
+        if not self.exploration_reward:
+            vector_to_target = self.active_task - xposafter
+            reward_run = -1.0 * abs(vector_to_target)
+            reward_ctrl = -0.5 * 1e-1 * np.sum(np.square(action))
+            reward = reward_ctrl + reward_run
+            return reward, reward_ctrl, reward_run
+        else:
+            return xposafter, 0, xposafter
 
     def step(self, action):
         self.check_env_change()

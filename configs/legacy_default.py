@@ -40,6 +40,7 @@ legacy_default_config = dict(
         encoder_exclude_padding=False,  # Whether to exclude padding during **training** of the VAE. This decreases performance substantially! Note: During rollouts, padding is always disabled.
         decoder_omit_input=None,
         exploration_agent=None,
+        exploration_pretraining_steps=100000,
         use_fixed_seeding=True,  # seeding, make comparison more robust
         seed=0,  # seed for torch and numpy
         batch_size_reconstruction=256,  # batch size reconstruction trainer

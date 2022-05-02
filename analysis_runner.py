@@ -49,9 +49,10 @@ def analysis(variant):
 
     # showcase learned policy loaded
     showcase_itr = variant['showcase_itr']
+    path_to_folder = variant['path_to_weights']
     example_cases = variant['analysis_params']['example_cases']
     train_example_cases = variant['analysis_params']['train_example_cases']
-    path_to_folder = variant['path_to_weights']
+    exploration_cases = train_example_cases if variant['analysis_params']['include_exploration_examples'] else []
 
     save = variant['analysis_params']['save']
     show = variant['analysis_params']['show']
@@ -72,7 +73,10 @@ def analysis(variant):
     if variant['analysis_params']['plot_encoding']:
         plot_encodings_split(showcase_itr, path_to_folder, save=save, save_dir=variant['save_dir'], save_prefix=variant['save_prefix'])
 
-    results_dict = {'train': {}, 'test': {}}
+    cases_dict = {'train': train_example_cases,
+                  'test': example_cases,
+                  'exploration': exploration_cases}
+    results_dict = {'train': {}, 'test': {}, 'exploration': {}}
     for example_case in example_cases:
         results = rollout_coordinator.collect_data(test_tasks[example_case:example_case + 1], 'test',
                 deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True)
@@ -81,6 +85,11 @@ def analysis(variant):
         results = rollout_coordinator.collect_data(train_tasks[train_example_case:train_example_case + 1], 'test',
                 deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True)
         results_dict['train'][train_example_case] = results[0][0][0][0]
+    for exploration_example_case in cases_dict['exploration']:
+        results = rollout_coordinator.collect_data(train_tasks[exploration_example_case:exploration_example_case + 1], 'test',
+                deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True,
+                use_exploration_agent=True, compute_exploration_task_indicators=True)
+        results_dict['exploration'][exploration_example_case] = results[0][0][0][0]
 
     if False:
         plt.plot(list(range(200)), results_dict[7]['task_indicators'][:, 0])
@@ -97,7 +106,7 @@ def analysis(variant):
 
     # Do separate plots for train and test cases
     for type in results_dict.keys():
-        cases = example_cases if type == 'test' else train_example_cases
+        cases = cases_dict[type]
         if not cases:
             continue
         for plot_spec in variant['analysis_params']['single_episode_plots']:

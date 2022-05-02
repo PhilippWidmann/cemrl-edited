@@ -1,7 +1,7 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='./output/toy-goal-line/2022_04_20_13_00_15',  # CONFIGURE! path to experiment folder
-    save_dir='./output_analysis/toy-goal-line/2022_04_20_13_00_15',
+    path_to_weights='./output/cheetah-stationary-targetTwosided/2022_05_01_11_55_20',  # CONFIGURE! path to experiment folder
+    save_dir='./output_analysis/cheetah-stationary-targetTwosided/2022_05_01_11_55_20',
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
     showcase_itr=[0, 10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500],  # CONFIGURE! epoch for which analysis is performed
     util_params=dict(
@@ -14,10 +14,11 @@ analysis_config = dict(
         plot=False  # plot figures of progress for reconstruction and policy training
     ),
     analysis_params=dict(
-        train_example_cases=[32, 1, 35, 0, 12],
-        example_cases=[9, 1, 19, 10, 23],  #[6, 7, 8, 9, 24],  # [9, 3, 7, 1, 14, 15],  # CONFIGURE! choose an array of test tasks
+        train_example_cases=[32, 22, 6, 35, 24, 16, 12],
+        example_cases=[9, 4, 24, 19, 28, 26, 23],  #[6, 7, 8, 9, 24],  # [9, 3, 7, 1, 14, 15],  # CONFIGURE! choose an array of test tasks
+        include_exploration_examples=True,
         single_episode_plots=[],
-        multiple_episode_plots=[['time_vs_task_indicators_fill_z_stds', 'time_vs_rewards', 'time_vs_pos_const_specification'],],
+        multiple_episode_plots=[['time_vs_task_indicators', 'time_vs_rewards', 'time_vs_pos_const_specification'],],
         log_and_plot_progress=False,  # CONFIGURE! If True: experiment will be logged to the experiment_database.json and plotted, If already logged: plot only
         save=True,  # CONFIGURE! If True: plots of following options will be saved to the experiment folder
         show=False,

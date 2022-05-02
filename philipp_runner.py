@@ -185,8 +185,9 @@ def initialize_networks(variant, env, experiment_log_dir):
             replay_buffer,
             variant['env_name'],
             variant['env_params'],
-            experiment_log_dir,
+            experiment_log_dir if variant['path_to_weights'] is None else variant['path_to_weights'],
             variant['algo_params']['max_path_length'],
+            variant['algo_params']['exploration_pretraining_steps'],
         )
     else:
         exploration_agent = agent
