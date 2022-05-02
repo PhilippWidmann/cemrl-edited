@@ -8,7 +8,7 @@ class StackedReplayBuffer:
     def __init__(self, max_replay_buffer_size,
                  encoder_time_steps,
                  decoder_time_window,
-                 max_path_length,
+                 max_group_length,
                  observation_dim,
                  action_dim,
                  task_indicator_dim,
@@ -36,18 +36,20 @@ class StackedReplayBuffer:
 
         self.encoder_time_steps = encoder_time_steps
         # Preprocess decoder window: Make endpoint inclusive, replace Inf with max_path_length
-        self.max_path_length = max_path_length
+        self.max_group_length = max_group_length
         self.decoder_full_episode_window = decoder_time_window == [-np.inf, np.inf]
-        decoder_time_window[0] = max(decoder_time_window[0], -max_path_length)
-        decoder_time_window[1] = min(decoder_time_window[1] + 1, max_path_length + 1)
+        decoder_time_window[0] = max(decoder_time_window[0], -max_group_length)
+        decoder_time_window[1] = min(decoder_time_window[1] + 1, max_group_length + 1)
         self.decoder_time_window = tuple(decoder_time_window)
         self._top = 0
+        self._top_group = 0
         self._size = 0
 
         # allowed points specify locations in the buffer, that, alone or together with the <self.time_step> last entries
         # can be sampled
         self._allowed_points = np.zeros(max_replay_buffer_size, dtype=bool)
         self._first_timestep = -np.ones(max_replay_buffer_size, dtype=int)
+        self._first_timestep_group = -np.ones(max_replay_buffer_size, dtype=int)
         self._exploration_trajectory = np.zeros(max_replay_buffer_size, dtype=bool)
 
         self._train_indices = []
@@ -57,6 +59,13 @@ class StackedReplayBuffer:
 
         self.permute_samples = permute_samples
         self.sampling_mode = sampling_mode
+
+    def add_episode_group(self, episode_list, task_nr=None):
+        for episode in episode_list[0]:
+            self.add_episode(episode, task_nr)
+        num_samples = episode_list[1]
+        self._top_group = (self._top_group + num_samples) % self._max_replay_buffer_size
+        return num_samples
 
     def add_episode(self, episode, task_nr=None):
         # Assume all array are same length (as they come from same rollout)
@@ -89,11 +98,14 @@ class StackedReplayBuffer:
         # Update allowed points with new indices
         self._allowed_points[indices_list] = True
         self._first_timestep[indices_list] = self._top
+        self._first_timestep_group[indices_list] = self._top_group
         self._exploration_trajectory[indices_list] = [episode['agent_infos'][i]['exploration_trajectory'] for i in range(len(indices_list))]
         # Reset start for next episode in buffer in case we overwrite the start
         next_index = (indices_list[-1] + 1) % self._max_replay_buffer_size
         if -1 < self._first_timestep[next_index]:
+            # Todo: This should delete (or at least remove from availability) an episode group that has been partially overwritten
             self._first_timestep[self._first_timestep == self._first_timestep[next_index]] = next_index
+            self._first_timestep_group[self._first_timestep_group == self._first_timestep_group[next_index]] = next_index
 
         # Increase buffer size and set _top to new end
         self._advance_multi(length)
@@ -165,13 +177,14 @@ class StackedReplayBuffer:
 
         padding_mask = (self._first_timestep[all_indices] != self._first_timestep[points][:, np.newaxis])
         if step_mode == 'decoder' and self.decoder_full_episode_window:
+            padding_mask = (self._first_timestep_group[all_indices] != self._first_timestep_group[points][:, np.newaxis])
             # Todo: This works only if we always fully overwrite episodes (never partially).
             # Todo: No problem as long as buffer_size = K * max_path_length, but fix nonetheless
-            if np.sum(~padding_mask) != (batch_size * self.max_path_length):
+            if np.sum(~padding_mask) != (batch_size * self.max_group_length):
                 warnings.warn('Not all sample episodes had the same length. Reconstruction of the whole episode is unoptimized.')
             else:
-                all_indices = np.reshape(all_indices[~padding_mask], (batch_size, self.max_path_length))
-                padding_mask = np.zeros((batch_size, self.max_path_length), dtype=bool)
+                all_indices = np.reshape(all_indices[~padding_mask], (batch_size, self.max_group_length))
+                padding_mask = np.zeros((batch_size, self.max_group_length), dtype=bool)
 
         data = self.get_data_batch(all_indices)
 

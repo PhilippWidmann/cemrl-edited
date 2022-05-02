@@ -163,7 +163,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['max_replay_buffer_size'],
         time_steps,
         variant['algo_params']['decoder_time_window'],
-        variant['algo_params']['max_path_length'],
+        variant['algo_params']['num_transitions_per_episode'],
         obs_dim,
         action_dim,
         latent_dim,

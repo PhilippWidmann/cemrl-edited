@@ -116,9 +116,7 @@ class RolloutCoordinator:
                                     deterministic=False, max_samples=max_samples, animated=False)
         for worker in results:
             for task in worker:
-                for path in task[0]:
-                    self.replay_buffer.add_episode(path)
-                num_env_steps += task[1]
+                num_env_steps += self.replay_buffer.add_episode_group(task)
         return num_env_steps
 
     def evaluate(self, train_test, tasks, num_eval_trajectories, use_exploration_agent=False, deterministic=True, animated=False, save_frames=False, log=True):
