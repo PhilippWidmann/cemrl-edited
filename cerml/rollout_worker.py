@@ -378,7 +378,7 @@ class RolloutWorker:
             a = torch.from_numpy(a)
             r = torch.from_numpy(r)
             next_o = torch.from_numpy(next_o)
-        data = torch.cat([o, a, r, next_o]).view(1, -1)
+        data = torch.cat([o, a, r, next_o]).view(1, -1).float()
         context = torch.cat([self.context, data], dim=0)
         context = context[-self.time_steps:]
         self.padding_mask = np.concatenate([self.padding_mask[:, 1:], np.zeros((1, 1), dtype=bool)], axis=-1)
