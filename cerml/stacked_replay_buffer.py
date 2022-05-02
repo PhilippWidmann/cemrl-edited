@@ -46,9 +46,9 @@ class StackedReplayBuffer:
 
         # allowed points specify locations in the buffer, that, alone or together with the <self.time_step> last entries
         # can be sampled
-        self._allowed_points = np.zeros(max_replay_buffer_size, dtype=np.bool)
-        self._first_timestep = -np.ones(max_replay_buffer_size, dtype=np.int)
-        self._exploration_trajectory = np.zeros(max_replay_buffer_size, dtype=np.bool)
+        self._allowed_points = np.zeros(max_replay_buffer_size, dtype=bool)
+        self._first_timestep = -np.ones(max_replay_buffer_size, dtype=int)
+        self._exploration_trajectory = np.zeros(max_replay_buffer_size, dtype=bool)
 
         self._train_indices = []
         self._val_indices = []
@@ -171,7 +171,7 @@ class StackedReplayBuffer:
                 warnings.warn('Not all sample episodes had the same length. Reconstruction of the whole episode is unoptimized.')
             else:
                 all_indices = np.reshape(all_indices[~padding_mask], (batch_size, self.max_path_length))
-                padding_mask = np.zeros((batch_size, self.max_path_length), dtype=np.bool)
+                padding_mask = np.zeros((batch_size, self.max_path_length), dtype=bool)
 
         data = self.get_data_batch(all_indices)
 
