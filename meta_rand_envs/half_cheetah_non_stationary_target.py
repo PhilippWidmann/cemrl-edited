@@ -16,9 +16,10 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         # should actually go into NonStationaryGoalTargetEnv, breaks abstraction
         self._init_geom_rgba = self.model.geom_rgba.copy()
 
-        self.train_tasks = self.sample_tasks(kwargs['n_train_tasks'])
-        self.test_tasks = self.sample_tasks(kwargs['n_eval_tasks'])
-        self.tasks = self.train_tasks + self.test_tasks
+        num_tasks = kwargs['n_train_tasks'] + kwargs['n_eval_tasks']
+        self.tasks = self.sample_tasks(num_tasks)
+        self.train_tasks = self.tasks[:kwargs['n_train_tasks']]
+        self.test_tasks = self.tasks[kwargs['n_train_tasks']:]
 
     def _compute_reward(self, action, xposafter):
         if not self.exploration_reward:
