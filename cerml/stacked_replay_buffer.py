@@ -129,8 +129,11 @@ class StackedReplayBuffer:
     def size(self):
         return self._size
 
-    def get_allowed_points(self):
-        return np.where(self._allowed_points)[0]
+    def get_allowed_points(self, include_exploration=True):
+        if include_exploration:
+            return np.where(self._allowed_points)[0]
+        else:
+            return np.where(self._allowed_points & ~self._exploration_trajectory)[0]
 
     def sample_indices(self, points, batch_size, prio=None):
         rng = np.random.default_rng()
