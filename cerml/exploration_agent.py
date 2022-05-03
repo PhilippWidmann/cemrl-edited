@@ -89,7 +89,7 @@ class ToyGoalExplorationAgent(nn.Module):
         # Note: This is handcrafted specifically for the toy environment where the state is the one-dimensional position
         previous_states = ptu.get_numpy(encoder_input[0, :, 0])
         direction = np.sign(state[0] - previous_states[-1])
-        if direction == 0:
+        if direction == 0 and abs(state[0]) <= 10E-6:
             direction = np.random.choice([-1, 1])
 
         if self.exploration_type == 'zigzag':
