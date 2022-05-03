@@ -29,19 +29,16 @@ def construct_exploration_agent(exploration_type,
                                 env_args,
                                 experiment_log_dir,
                                 max_timesteps,
-                                exploration_pretraining_steps):
+                                exploration_pretraining_steps,
+                                num_exploration_ensemble_agents):
     if exploration_type == 'counterfactual_task':
         return CounterfactualTaskExplorationAgent(policy,
                                                   replay_buffer)
+    elif 'ensemble_urlb' in exploration_type:
+        exploration_type = exploration_type.replace('ensemble_urlb', 'urlb')
+        return EnsembleURLBAgent(num_exploration_ensemble_agents, env_name, env_args, exploration_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps)
     elif 'urlb' in exploration_type:
-        # Expect the specific agent to be specified in the format urlb_rnd
-        agent_type = exploration_type.split('_')
-        if len(agent_type) == 2:
-            agent_type = agent_type[1]
-        else:
-            warnings.warn('Specific URLB agent unspecified or not understood. Defaulting to "rnd"')
-            agent_type = 'rnd'
-        return URLBAgent(env_name, env_args, agent_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps)
+        return URLBAgent(env_name, env_args, exploration_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps)
     else:
         return ToyGoalExplorationAgent(exploration_type,
                                        zigzag_max=25,
@@ -115,12 +112,20 @@ class URLBAgent(nn.Module):
     def __init__(self,
                  env_name,
                  env_args,
-                 agent_type,
+                 exploration_type,
                  experiment_log_dir,
                  max_timesteps,
-                 pretraining_steps
+                 pretraining_steps,
+                 ensemble_id=None
                  ):
         super().__init__()
+        # Expect the specific agent to be specified in the format urlb_rnd
+        agent_type = exploration_type.split('_')
+        if len(agent_type) == 2:
+            agent_type = agent_type[1]
+        else:
+            warnings.warn('Specific URLB agent unspecified or not understood. Defaulting to "rnd"')
+            agent_type = 'rnd'
         self.agent_type = agent_type
         self.pretraining_steps = pretraining_steps
 
@@ -146,7 +151,8 @@ class URLBAgent(nn.Module):
                         f'snapshots={[pretraining_steps]}',
                         f'snapshot_dir="."']
         print('Initializing exploration agent')
-        self.workspace, self.trained = generate_model(self.train_env, self.eval_env, cfg_override, self.workdir, snapshot_itr=pretraining_steps)
+        self.workspace, self.trained = generate_model(self.train_env, self.eval_env, cfg_override, self.workdir, snapshot_itr=pretraining_steps,
+                                                      snapshot_prefix=f'agent_{ensemble_id}_' if ensemble_id is not None else '')
         if self.trained:
             print('Loaded exploration agent from file')
         else:
@@ -206,3 +212,24 @@ class URLBAgent(nn.Module):
 
         def action_spec(self):
             return self._action_spec
+
+
+class EnsembleURLBAgent(nn.Module):
+    def __init__(self,
+                 num_ensemble_agents,
+                 *args,
+                 **kwargs):
+        super().__init__()
+        self.agent_ids = list(range(num_ensemble_agents))
+        self.agents = torch.nn.ModuleList()
+        for i in self.agent_ids:
+            self.agents.append(URLBAgent(*args, ensemble_id=i, **kwargs))
+
+    def get_action(self, *args, agent_info=None, **kwargs):
+        if 'ensemble_agent' in agent_info.keys():
+            id = agent_info['ensemble_agent']
+        else:
+            id = np.random.choice(self.agent_ids)
+        action, agent_info, task, base_task = self.agents[id].get_action(*args, agent_info=agent_info, **kwargs)
+        agent_info['ensemble_agent'] = id
+        return action, agent_info, task, base_task

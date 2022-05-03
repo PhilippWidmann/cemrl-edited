@@ -4,7 +4,7 @@ import rlkit.torch.pytorch_util as ptu
 
 
 @click.command()
-@click.argument('config', default="configs/toy-goal/toy-goal-line.json")
+@click.argument('config', default="configs/cheetah-target/cheetah-stationary-target-exploration.json")#toy-goal/toy-goal-line.json")
 def showcase_exploration(config):
     import json
     from configs.default import default_config
@@ -35,8 +35,8 @@ def showcase_exploration(config):
     algorithm.train()
 
     ### Plot exploration trajectories
-    urlb_methods = ['smm', 'aps', 'diayn']#['icm', 'proto', 'diayn', 'icm_apt', 'ind_apt', 'aps', 'smm', 'rnd', 'disagreement']
-    methods = ['urlb_' + m for m in urlb_methods]  # + ['line']
+    urlb_methods = ['smm']#['icm', 'proto', 'diayn', 'icm_apt', 'ind_apt', 'aps', 'smm', 'rnd', 'disagreement']
+    methods = ['ensemble_urlb_' + m for m in urlb_methods]  # + ['line']
     for exploration_method in methods:
         import configs
         import shutil

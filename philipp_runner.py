@@ -188,6 +188,7 @@ def initialize_networks(variant, env, experiment_log_dir):
             experiment_log_dir if variant['path_to_weights'] is None else variant['path_to_weights'],
             variant['algo_params']['max_path_length'],
             variant['algo_params']['exploration_pretraining_steps'],
+            variant['algo_params']['exploration_ensemble_agents'],
         )
     else:
         exploration_agent = agent
@@ -404,7 +405,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/toy-goal/toy-goal-line.json")
+@click.argument('config', default="configs/cheetah-target/cheetah-stationary-target-exploration.json")#toy-goal/toy-goal-line.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
