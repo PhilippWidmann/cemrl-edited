@@ -112,7 +112,7 @@ class PolicyTrainer:
 
     def train(self, epochs):
         gt.stamp('pt_train_start')
-        indices = np.array(self.replay_buffer.get_allowed_points(include_exploration=False))
+        indices = np.array(self.replay_buffer.get_allowed_points(include_exploration=True))
         if self.data_usage_sac == 'tree_sampling':
             indices = np.random.permutation(indices)
         policy_losses = []
