@@ -162,8 +162,12 @@ class ToyGoalEnv(Env):
 
     def _get_reward_at(self, y, x):
         if self.exploration_reward:
-            # Use the distance to starting point as exploration evaluation reward (only used in exploration agent)
-            return - self._get_reward_at_with_goals(y, x, 0, 0)
+            # Use the distance to starting point as exploration reward (only used for evaluation in exploration agent)
+            # Convention for 1D: If we are to the right of 0, reward is positive, to the left it is negative
+            if self.goal_1d:
+                return y
+            else:
+                return - self._get_reward_at_with_goals(y, x, 0, 0)
         else:
             return self._get_reward_at_with_goals(y, x, self.goal['goal'][0], self.goal['goal'][1])
 
