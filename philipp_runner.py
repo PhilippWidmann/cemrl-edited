@@ -262,6 +262,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['data_usage_sac'],
         variant['algo_params']['use_data_normalization'],
         variant['algo_params']['use_sac_data_normalization'],
+        variant['algo_params']['sac_uses_exploration_data'],
         policy_lr=variant['algo_params']['lr_policy'],
         qf_lr=variant['algo_params']['lr_qf'],
         use_parametrized_alpha=variant['algo_params']['use_parametrized_alpha'],

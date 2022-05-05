@@ -25,7 +25,7 @@
         "exploration_agent": "ensemble_urlb_smm",
         "exploration_pretraining_steps": 20000,
         "exploration_ensemble_agents": 3,
-        "sac_uses_exploration_data": false,
+        "sac_uses_exploration_data": true,
         "use_fixed_seeding": true,
         "seed": 0,
         "batch_size_reconstruction": 256,

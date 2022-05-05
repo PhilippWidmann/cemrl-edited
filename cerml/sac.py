@@ -29,6 +29,7 @@ class PolicyTrainer:
             data_usage_sac,
             use_data_normalization,
             use_sac_data_normalization,
+            sac_uses_exploration_data,
 
             discount=0.99,
             reward_scale=1.0,
@@ -62,6 +63,7 @@ class PolicyTrainer:
         self.data_usage_sac = data_usage_sac
         self.use_data_normalization = use_data_normalization
         self.use_sac_data_normalization = use_sac_data_normalization
+        self.sac_uses_exploration_data = sac_uses_exploration_data
 
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
         self.use_parametrized_alpha = use_parametrized_alpha
@@ -112,7 +114,7 @@ class PolicyTrainer:
 
     def train(self, epochs):
         gt.stamp('pt_train_start')
-        indices = np.array(self.replay_buffer.get_allowed_points(include_exploration=True))
+        indices = np.array(self.replay_buffer.get_allowed_points(include_exploration=self.sac_uses_exploration_data))
         if self.data_usage_sac == 'tree_sampling':
             indices = np.random.permutation(indices)
         policy_losses = []
