@@ -31,7 +31,8 @@ def analysis(variant):
             try:
                 res = analysis(variant)
             except FileNotFoundError:
-                warnings.warn(f'Skipped iteration {itr} because the corresponding savefiles do not exist')
+                warnings.warn(f'Stopped before iteration {itr} because the corresponding savefiles do not exist')
+                exit(1)
         # Return last result from iteration list; no usecase currently
         return res
 
@@ -87,8 +88,8 @@ def analysis(variant):
         results_dict['train'][train_example_case] = results[0][0][0][0]
     for exploration_example_case in cases_dict['exploration']:
         results = rollout_coordinator.collect_data(train_tasks[exploration_example_case:exploration_example_case + 1], 'test',
-                deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True,
-                use_exploration_agent=True, compute_exploration_task_indicators=True)
+                deterministic=True, max_trajs=0, max_trajs_exploration=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True,
+                compute_exploration_task_indicators=True)
         results_dict['exploration'][exploration_example_case] = results[0][0][0][0]
 
     if False:

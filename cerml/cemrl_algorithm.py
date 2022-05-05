@@ -29,8 +29,9 @@ class CEMRLAlgorithm:
                  num_reconstruction_steps,
                  num_policy_steps,
                  num_train_tasks_per_episode,
-                 num_transitions_initial,
-                 num_transistions_per_episode,
+                 num_initial_collection_cycles_per_task,
+                 num_trajectories_per_task,
+                 num_exploration_trajectories_per_task,
                  num_eval_trajectories,
                  showcase_every,
                  snapshot_gap,
@@ -59,9 +60,10 @@ class CEMRLAlgorithm:
         self.num_epochs = num_epochs
         self.num_reconstruction_steps = num_reconstruction_steps
         self.num_policy_steps = num_policy_steps
-        self.num_transitions_initial = num_transitions_initial
+        self.num_initial_collection_cycles_per_task = num_initial_collection_cycles_per_task
         self.num_train_tasks_per_episode = num_train_tasks_per_episode
-        self.num_transitions_per_episode = num_transistions_per_episode
+        self.num_trajectories_per_task = num_trajectories_per_task
+        self.num_exploration_trajectories_per_task = num_exploration_trajectories_per_task
         self.num_eval_trajectories = num_eval_trajectories
         self.use_relabeler = use_relabeler
         self.use_combination_trainer = use_combination_trainer
@@ -84,8 +86,13 @@ class CEMRLAlgorithm:
         previous_epoch_end = 0
 
         print("Collecting initial samples ...")
-        if self.num_transitions_initial > 0:
-            self._n_env_steps_total += self.rollout_coordinator.collect_replay_data(self.train_tasks, use_exploration_agent=self.use_exploration_agent, max_samples=self.num_transitions_initial)
+        for i in range(self.num_initial_collection_cycles_per_task):
+            self._n_env_steps_total += \
+                self.rollout_coordinator.collect_replay_data(
+                    self.train_tasks,
+                    max_trajs=self.num_trajectories_per_task,
+                    max_trajs_exploration=self.num_exploration_trajectories_per_task
+                )
 
         for epoch in gt.timed_for(range(self.num_epochs), save_itrs=True):
             tabular_statistics = OrderedDict()
@@ -93,9 +100,18 @@ class CEMRLAlgorithm:
             # 1. collect data with rollout coordinator
             print("Collecting samples ...")
             data_collection_tasks = np.random.permutation(self.train_tasks)[:self.num_train_tasks_per_episode]
-            self._n_env_steps_total += self.rollout_coordinator.collect_replay_data(data_collection_tasks, max_samples=self.num_transitions_per_episode)
             if self.use_exploration_agent:
-                self._n_env_steps_total += self.rollout_coordinator.collect_replay_data(data_collection_tasks, use_exploration_agent=True, max_samples=self.num_transitions_per_episode)
+                self._n_env_steps_total += \
+                    self.rollout_coordinator.collect_replay_data(
+                        data_collection_tasks,
+                        max_trajs=self.num_trajectories_per_task,
+                        max_trajs_exploration=self.num_exploration_trajectories_per_task
+                    )
+            else:
+                self._n_env_steps_total += \
+                    self.rollout_coordinator.collect_replay_data(data_collection_tasks,
+                                                                 max_trajs=self.num_trajectories_per_task)
+
             tabular_statistics['n_env_steps_total'] = self._n_env_steps_total
             gt.stamp('data_collection')
 

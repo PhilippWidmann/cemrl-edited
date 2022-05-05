@@ -159,11 +159,13 @@ def initialize_networks(variant, env, experiment_log_dir):
         **policy_networks.get_networks()
     }
 
+    combined_trajectories = variant['algo_params']['num_trajectories_per_task'] \
+                            + variant['algo_params']['num_exploration_trajectories_per_task']
     replay_buffer = StackedReplayBuffer(
         variant['algo_params']['max_replay_buffer_size'],
         time_steps,
         variant['algo_params']['decoder_time_window'],
-        variant['algo_params']['num_transitions_per_episode'],
+        combined_trajectories * variant['algo_params']['max_path_length'],
         obs_dim,
         action_dim,
         latent_dim,
@@ -354,8 +356,9 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['num_reconstruction_steps'],
         variant['algo_params']['num_policy_steps'],
         variant['algo_params']['num_train_tasks_per_episode'],
-        variant['algo_params']['num_transitions_initial'],
-        variant['algo_params']['num_transitions_per_episode'],
+        variant['algo_params']['num_initial_collection_cycles_per_task'],
+        variant['algo_params']['num_trajectories_per_task'],
+        variant['algo_params']['num_exploration_trajectories_per_task'],
         variant['algo_params']['num_eval_trajectories'],
         variant['algo_params']['showcase_every'],
         variant['algo_params']['snapshot_gap'],

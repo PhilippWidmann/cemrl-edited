@@ -62,8 +62,8 @@ class RolloutCoordinator:
                 # driver_object_store_memory=1000 * 1024 * 1024
             )
 
-    def collect_data(self, tasks, train_test, use_exploration_agent=False, compute_exploration_task_indicators=False, deterministic=False, max_samples=np.inf,
-                     max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
+    def collect_data(self, tasks, train_test, compute_exploration_task_indicators=False, deterministic=False, max_samples=np.inf,
+                     max_trajs=np.inf, max_trajs_exploration=0, animated=False, save_frames=False, return_distributions=False):
         """
         Distribute tasks over workers
         :return: Trajectories as a list of list of list (workers, tasks, (path_dict, num_env_steps))
@@ -76,7 +76,6 @@ class RolloutCoordinator:
             tasks_per_worker[counter].append(task)
             counter += 1
 
-        exploration_agent = self.exploration_agent if use_exploration_agent else None
         if self.use_multiprocessing:
             # put on cpu before starting ray
             self.agent.to('cpu')
@@ -85,17 +84,17 @@ class RolloutCoordinator:
             workers = [RemoteRolloutWorker.remote(None, self.env_name, self.env_args, self.train_or_showcase,
                                                   self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
                                                   self.use_multiprocessing, self.use_data_normalization, self.use_sac_data_normalization, self.replay_buffer.stats_dict,
-                                                  task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks, exploration_agent, compute_exploration_task_indicators) for task_list in tasks_per_worker]
+                                                  task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks, self.exploration_agent, compute_exploration_task_indicators) for task_list in tasks_per_worker]
             results = ray.get([worker.obtain_samples_from_list.remote(train_test,
-                deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated,
+                deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, max_trajs_exploration=max_trajs_exploration, animated=animated,
                 save_frames=save_frames, return_distributions=return_distributions) for worker in workers])
         else:
             workers = [RolloutWorker(self.env, self.env_name, self.env_args, self.train_or_showcase,
                                      self.agent, self.time_steps, self.max_path_length, self.permute_samples, self.gpu_id, self.scripted_policy,
                                      self.use_multiprocessing, self.use_data_normalization, self.use_sac_data_normalization, self.replay_buffer.stats_dict,
-                                     task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks, exploration_agent, compute_exploration_task_indicators) for task_list in tasks_per_worker]
+                                     task_list, self.env.tasks, self.env.train_tasks, self.env.test_tasks, self.exploration_agent, compute_exploration_task_indicators) for task_list in tasks_per_worker]
             results = [[worker.obtain_samples(task, train_test,
-                deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated,
+                deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, max_trajs_exploration=max_trajs_exploration, animated=animated,
                 save_frames=save_frames, return_distributions=return_distributions
             ) for task in task_list] for worker, task_list in zip(workers, tasks_per_worker)]
 
@@ -104,7 +103,7 @@ class RolloutCoordinator:
         self.agent.encoder.to(ptu.device)
         return results
 
-    def collect_replay_data(self, tasks, use_exploration_agent=False, max_samples=np.inf):
+    def collect_replay_data(self, tasks, max_samples=np.inf, max_trajs=np.inf, max_trajs_exploration=0):
         """
         Run episodes on the environment and store the trajectories in the replay buffer
         :param tasks: List of tasks to run
@@ -112,15 +111,15 @@ class RolloutCoordinator:
         :return: Number of environment steps executed
         """
         num_env_steps = 0
-        results = self.collect_data(tasks, 'train', use_exploration_agent=use_exploration_agent,
-                                    deterministic=False, max_samples=max_samples, animated=False)
+        results = self.collect_data(tasks, 'train',
+                                    deterministic=False, max_samples=max_samples, max_trajs=max_trajs, max_trajs_exploration=max_trajs_exploration, animated=False)
         for worker in results:
             for task in worker:
                 num_env_steps += self.replay_buffer.add_episode_group(task)
         return num_env_steps
 
-    def evaluate(self, train_test, tasks, num_eval_trajectories, use_exploration_agent=False, deterministic=True, animated=False, save_frames=False, log=True):
-        results = self.collect_data(tasks, 'train_test', use_exploration_agent=use_exploration_agent, deterministic=deterministic, max_trajs=num_eval_trajectories,
+    def evaluate(self, train_test, tasks, num_eval_trajectories, deterministic=True, animated=False, save_frames=False, log=True):
+        results = self.collect_data(tasks, 'train_test', deterministic=deterministic, max_trajs=num_eval_trajectories,
                                     animated=animated, save_frames=save_frames)
         eval_statistics = OrderedDict()
         if log:
@@ -183,7 +182,6 @@ class RolloutWorker:
             self.env = environment
         else:
             self.env = env
-        self.main_agent = exploration_agent if exploration_agent is not None else agent
         self.agent = agent
         self.exploration_agent = exploration_agent
         self.compute_exploration_task_indicators = compute_exploration_task_indicators
@@ -207,15 +205,15 @@ class RolloutWorker:
         self.context = None
         self.padding_mask = None
 
-    def obtain_samples_from_list(self, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
+    def obtain_samples_from_list(self, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, max_trajs_exploration=0, animated=False, save_frames=False, return_distributions=False):
         results = []
         for task in self.task_list:
-            result = self.obtain_samples(task, train_test, deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, animated=animated, save_frames=save_frames, return_distributions=return_distributions)
+            result = self.obtain_samples(task, train_test, deterministic=deterministic, max_samples=max_samples, max_trajs=max_trajs, max_trajs_exploration=max_trajs_exploration, animated=animated, save_frames=save_frames, return_distributions=return_distributions)
             results.append(result)
 
         return results
 
-    def obtain_samples(self, task, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, animated=False, save_frames=False, return_distributions=False):
+    def obtain_samples(self, task, train_test, deterministic=False, max_samples=np.inf, max_trajs=np.inf, max_trajs_exploration=0, animated=False, save_frames=False, return_distributions=False):
         """
         Obtains samples in the environment until either we reach either max_samples transitions or
         num_traj trajectories.
@@ -226,7 +224,16 @@ class RolloutWorker:
         assert max_samples < np.inf or max_trajs < np.inf, "either max_samples or max_trajs must be finite"
         paths = []
         n_steps_total = 0
+        n_steps_total_exploration = 0
         n_trajs = 0
+        n_trajs_exploration = 0
+        while n_trajs_exploration < max_trajs_exploration:
+            self.env.reset_task(task)
+            self.env.set_meta_mode(train_test)
+            path = self.rollout(deterministic=deterministic, max_path_length=self.max_path_length, animated=animated, save_frames=save_frames, return_distributions=return_distributions, use_exploration_agent=True)
+            paths.append(path)
+            n_steps_total_exploration += len(path['observations'])
+            n_trajs_exploration += 1
         while n_steps_total < max_samples and n_trajs < max_trajs:
             self.env.reset_task(task)
             self.env.set_meta_mode(train_test)
@@ -234,9 +241,15 @@ class RolloutWorker:
             paths.append(path)
             n_steps_total += len(path['observations'])
             n_trajs += 1
-        return paths, n_steps_total
+        return paths, n_steps_total + n_steps_total_exploration
 
-    def rollout(self, deterministic=False, max_path_length=np.inf, animated=False, save_frames=False, return_distributions=False):
+    def rollout(self, deterministic=False, max_path_length=np.inf, animated=False, save_frames=False, return_distributions=False, use_exploration_agent=False):
+        if use_exploration_agent:
+            if self.exploration_agent is None:
+                raise RuntimeError('Trying to collect exploration trajectories, but no exploration agent was given.')
+            current_agent = self.exploration_agent
+        else:
+            current_agent = self.agent
 
         observations = []
         task_indicators = []
@@ -265,9 +278,9 @@ class RolloutWorker:
             self.env.render()
         while path_length < max_path_length:
             o_input, agent_input, padding_mask = self.build_encoder_input(o, self.context, self.padding_mask)
-            out = self.main_agent.get_action(agent_input, o_input, input_padding=padding_mask, deterministic=deterministic,
-                                             z_debug=None, env=self.env, return_distributions=return_distributions,
-                                             agent_info=agent_info)
+            out = current_agent.get_action(agent_input, o_input, input_padding=padding_mask, deterministic=deterministic,
+                                           z_debug=None, env=self.env, return_distributions=return_distributions,
+                                           agent_info=agent_info)
             a = out[0]
             agent_info = out[1]
             task_indicator = out[2]
@@ -310,7 +323,7 @@ class RolloutWorker:
 
         next_o_input, agent_input, paddings_mask = self.build_encoder_input(next_o, self.context, self.padding_mask)
         _, _, next_task_indicator, next_base_task_indicator, *_ = \
-            self.main_agent.get_action(agent_input, next_o_input, input_padding=padding_mask, deterministic=deterministic, env=self.env, agent_info=agent_info)
+            current_agent.get_action(agent_input, next_o_input, input_padding=padding_mask, deterministic=deterministic, env=self.env, agent_info=agent_info)
         if next_base_task_indicator is None and self.compute_exploration_task_indicators:
             _, _, next_task_indicator, next_base_task_indicator, *_ = self.agent.get_action(agent_input, next_o_input, input_padding=padding_mask,
                                                       deterministic=deterministic,
