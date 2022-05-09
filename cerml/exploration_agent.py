@@ -120,12 +120,11 @@ class URLBAgent(nn.Module):
                  ):
         super().__init__()
         # Expect the specific agent to be specified in the format urlb_rnd
-        agent_type = exploration_type.split('_')
+        agent_type = exploration_type.split('_', 1)
         if len(agent_type) == 2:
             agent_type = agent_type[1]
         else:
-            warnings.warn('Specific URLB agent unspecified or not understood. Defaulting to "rnd"')
-            agent_type = 'rnd'
+            raise ValueError('Specific URLB agent unspecified or not understood.')
         self.agent_type = agent_type
         self.pretraining_steps = pretraining_steps
 
