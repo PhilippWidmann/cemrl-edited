@@ -7,7 +7,7 @@ import numpy as np
 
 
 class ML1Reach(metaworld.Benchmark):
-    def __init__(self, env_name, seed=None, partially_observable=True):
+    def __init__(self, env_name, seed=0, partially_observable=True):
         super().__init__()
         if not env_name in REACH_ENV_DICT.keys():
             raise ValueError(f"{env_name} is not a valid special-reach-environment")

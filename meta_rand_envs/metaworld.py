@@ -86,11 +86,13 @@ class MetaWorldEnv(MetaEnvironment):
     def sample_tasks(self, num_train_tasks_per_base_task, num_test_tasks_per_base_task):
         self.train_tasks = []
         for name, env_cls in self.ml_env.train_classes.items():
+            random.seed(0)
             tasks = random.sample([task for task in self.ml_env.train_tasks if task.env_name == name], num_train_tasks_per_base_task)
             self.train_tasks += tasks
 
         self.test_tasks = []
         for name, env_cls in self.ml_env.test_classes.items():
+            random.seed(1)
             tasks = random.sample([task for task in self.ml_env.test_tasks if task.env_name == name], num_test_tasks_per_base_task)
             self.test_tasks += tasks
 
