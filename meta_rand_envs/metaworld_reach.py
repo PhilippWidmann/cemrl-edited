@@ -54,6 +54,14 @@ class SawyerReachEnvV2AlternateGoal(SawyerReachEnvV2):
                                        'Something in the logic/code must be wrong.')
         return res
 
+    def step(self, action):
+        ob, reward, done, info = super().step(action)
+        # Todo: Find a better way (e.g. choose a new random train task for each episode)
+        # This is a hack, since the object position can leak the target if the algorithm memorizes it for all train tasks
+        ob[4:11] = 0
+        ob[22:29] = 0
+        return ob, reward, done, info
+
 
 # Environment where the goal only lies on a line left/right from the initial position
 class SawyerReachEnvV2Line(SawyerReachEnvV2AlternateGoal):
