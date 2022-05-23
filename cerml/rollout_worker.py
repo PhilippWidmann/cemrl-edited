@@ -295,6 +295,8 @@ class RolloutWorker:
                                                           agent_info=agent_info)
                 task_indicator = out_supplementary[2]
                 base_task_indicator = out_supplementary[3]
+                if 'latent_distribution' in out_supplementary[1].keys():
+                    agent_info['latent_distribution'] = out_supplementary[1]['latent_distribution']
             next_o, r, d, env_info = self.env.step(a)
             self.update_context(o, a, np.array([r], dtype=np.float32), next_o)
             if self.scripted_policy:

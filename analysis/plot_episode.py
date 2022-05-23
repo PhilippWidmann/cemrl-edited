@@ -4,6 +4,17 @@ import matplotlib.pyplot as plt
 
 
 def get_quantity(results, quantity):
+    quantity_list = quantity.replace(']', '')
+    quantity_list = quantity_list.split('[')
+    if len(quantity_list) == 1:
+        quantity = quantity_list[0]
+        index = None
+    elif len(quantity_list) == 2:
+        quantity = quantity_list[0]
+        index = int(quantity_list[1])
+    else:
+        raise ValueError(f'Desired quantity={quantity} contains too many parenthesis. Only one layer is supported.')
+
     if quantity == 'time':
         data = list(range(len(results['observations'])))
     elif quantity in ['observations', 'next_observations', 'actions', 'rewards', 'task_indicators', 'base_task_indicators',
@@ -22,7 +33,11 @@ def get_quantity(results, quantity):
             data = [data[i, y_selection[i]] for i in range(len(y_selection))]
     else:
         raise ValueError(f'Desired quantity={quantity} is unknown or not available for this environment')
-    return np.array(data).squeeze()
+
+    data = np.array(data).squeeze()
+    if index is not None:
+        data = data[..., index]
+    return data
 
 
 def get_plot_specification(specifications):

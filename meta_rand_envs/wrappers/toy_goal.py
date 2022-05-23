@@ -8,6 +8,7 @@ from . import register_env
 @register_env('toy-goal')
 @register_env('toy-goal-halfline')
 @register_env('toy-goal-line')
+@register_env('toy-goal-plane')
 class ToyGoalEnv(Env):
 
     def __init__(self, *args, **kwargs):
@@ -131,7 +132,7 @@ class ToyGoalEnv(Env):
                                           # np.array([self.goal['goal'][0], self.goal['goal'][1], self.goal['angle'], self.goal['radius']])), TODO enable specification of higher dimension
                                           success=bool(
                                               np.linalg.norm(self._state - self.goal['goal']) < self.goal_radius),
-                                          pos=self._state)
+                                          pos=np.copy(self._state))
 
     def _get_obs(self):
         return np.copy(self._state[0:1] if self.goal_1d else self._state)# / (self.task_goal_offset + self.task_max_radius)
