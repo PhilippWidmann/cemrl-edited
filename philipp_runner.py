@@ -409,7 +409,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/cheetah-target/cheetah-stationary-target-exploration.json")#toy-goal/toy-goal-line.json")
+@click.argument('config', default="configs/ant-target/ant-stationary-target-exploration.json")#cheetah-target/cheetah-stationary-target-exploration.json")#toy-goal/toy-goal-line.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
