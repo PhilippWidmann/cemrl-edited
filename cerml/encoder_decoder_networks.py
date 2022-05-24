@@ -91,7 +91,8 @@ class Encoder(nn.Module):
     def forward(self, x, padding_mask=None, return_distributions=False, exclude_padding=False):
         """
         Encode the provided context
-        :param x: context of the form (batch_size, time_steps, obs + action + reward + next_obs)
+        :param x: a context list containing [obs, action, reward, next_obs], respectively
+                of the form (batch_size, time_steps, <obs/action/reward dim>)
         :param return_distributions: If true, also return the distribution objects, not just a sampled data point
         :return: z - task indicator [batch_size, latent_dim]
                  y - base task indicator [batch_size]
@@ -119,6 +120,7 @@ class Encoder(nn.Module):
 
         # Compute shared encoder forward pass
         # Just encode everything at once; if necessary, the shared_encoder must take the padding_mask into account.
+        x = torch.cat(x, dim=-1)
         m = self.shared_encoder(x, padding_mask)
 
         # Compute class probabilities

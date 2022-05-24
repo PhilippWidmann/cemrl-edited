@@ -284,18 +284,18 @@ class StackedReplayBuffer:
                 padding_mask[samples_without_data, -1] = False
 
         # size: [batch_size, time_steps, obs+action+reward]
-        encoder_input = torch.cat(
-            [observations_encoder_input, actions_encoder_input, rewards_encoder_input, next_observations_encoder_input],
-            dim=-1)
+        encoder_input = [observations_encoder_input, actions_encoder_input, rewards_encoder_input,
+                         next_observations_encoder_input]
 
         if self.permute_samples:
             perm = torch.randperm(encoder_input.shape[1]).long()
-            encoder_input = encoder_input[:, perm]
+            encoder_input = [e[:, perm] for e in encoder_input]
 
         if self.encoder_time_steps == -1:
             raise NotImplementedError('The convention time_steps==-1 equals variable length input has not been implemented.')
 
-        return encoder_input.to(ptu.device), padding_mask
+        encoder_input = [e.to(ptu.device) for e in encoder_input]
+        return encoder_input, padding_mask
 
     def get_stats(self):
         values_dict = dict(

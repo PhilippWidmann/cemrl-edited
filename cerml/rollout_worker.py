@@ -259,7 +259,10 @@ class RolloutWorker:
         terminals = []
         agent_infos = []
         env_infos = []
-        self.context = torch.zeros((self.time_steps, self.obs_space + self.action_space + 1 + self.obs_space))
+        self.context = [torch.zeros((self.time_steps, self.obs_space)),
+                        torch.zeros((self.time_steps, self.action_space)),
+                        torch.zeros((self.time_steps, 1)),
+                        torch.zeros((self.time_steps, self.obs_space))]
         self.padding_mask = np.ones((1, self.time_steps), dtype=bool)
         action_space = int(np.prod(self.env.action_space.shape))
 
@@ -393,14 +396,15 @@ class RolloutWorker:
             a = torch.from_numpy(a)
             r = torch.from_numpy(r)
             next_o = torch.from_numpy(next_o)
-        data = torch.cat([o, a, r, next_o]).view(1, -1).float()
-        context = torch.cat([self.context, data], dim=0)
-        context = context[-self.time_steps:]
+
+        data = [o, a, r, next_o]
+        data = [d.view(1, -1).float() for d in data]
+        for i in range(len(self.context)):
+            self.context[i] = torch.cat([self.context[i], data[i]], dim=0)[-self.time_steps:]
         self.padding_mask = np.concatenate([self.padding_mask[:, 1:], np.zeros((1, 1), dtype=bool)], axis=-1)
-        self.context = context
 
     def build_encoder_input(self, obs, context, padding_mask):
-        encoder_input = context.detach().clone()
+        encoder_input = [c.detach().clone() for c in context]
         padding_mask = np.copy(padding_mask)
 
         if np.sum(~padding_mask) == 0:
@@ -410,9 +414,9 @@ class RolloutWorker:
 
         if self.permute_samples:
             perm = torch.LongTensor(torch.randperm(encoder_input.shape[0]))
-            encoder_input = encoder_input[perm]
+            encoder_input = [e[perm] for e in encoder_input]
             padding_mask = padding_mask[..., ptu.get_numpy(perm)]
-        encoder_input.unsqueeze_(0)
+        [e.unsqueeze_(0) for e in encoder_input]
 
         if self.use_sac_data_normalization and self.replay_buffer_stats_dict is not None:
             o_input = (obs - self.replay_buffer_stats_dict["observations"]["mean"]) \
@@ -420,7 +424,8 @@ class RolloutWorker:
         else:
             o_input = obs
 
-        return o_input, encoder_input.to(ptu.device), padding_mask
+        encoder_input = [e.to(ptu.device) for e in encoder_input]
+        return o_input, encoder_input, padding_mask
 
 
 @ray.remote
