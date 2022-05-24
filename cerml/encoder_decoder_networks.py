@@ -36,6 +36,26 @@ class PriorPz(nn.Module):
         return self.linear(m)
 
 
+class StateEncoder(nn.Module):
+    def __init__(self,
+                 state_dim,
+                 state_preprocessing_dim,
+                 net_complex_enc_dec
+                 ):
+        super().__init__()
+        self.output_dim = state_preprocessing_dim if state_preprocessing_dim != 0 else state_dim
+        if state_preprocessing_dim != 0:
+            hidden_dim = int(net_complex_enc_dec * state_dim)
+            self.layers = torch.nn.Sequential(nn.Linear(state_dim, hidden_dim),
+                                              nn.ReLU(),
+                                              nn.Linear(hidden_dim, state_preprocessing_dim))
+        else:
+            self.layers = nn.Identity()
+
+    def forward(self, m):
+        return self.layers(m)
+
+
 class Encoder(nn.Module):
     def __init__(self,
                  state_dim,
@@ -47,6 +67,7 @@ class Encoder(nn.Module):
                  latent_dim,
                  batch_size,
                  num_classes,
+                 state_preprocessing_dim=0,
                  time_steps=None,
                  merge_mode=None,
                  **kwargs
@@ -60,19 +81,21 @@ class Encoder(nn.Module):
         self.merge_mode = merge_mode
         self.always_exclude_padding = encoder_exclude_padding
 
+        self.state_preprocessor = StateEncoder(state_dim, state_preprocessing_dim, net_complex_enc_dec)
+        adjusted_state_dim = self.state_preprocessor.output_dim
         if encoder_type == 'TimestepMLP':
-            self.shared_encoder = SharedEncoderTimestepMLP(state_dim, action_dim, reward_dim, net_complex_enc_dec)
+            self.shared_encoder = SharedEncoderTimestepMLP(adjusted_state_dim, action_dim, reward_dim, net_complex_enc_dec)
         elif encoder_type == 'MeanTimestepMLP':
-            self.shared_encoder = SharedEncoderMeanTimestepMLP(state_dim, action_dim, reward_dim, net_complex_enc_dec)
+            self.shared_encoder = SharedEncoderMeanTimestepMLP(adjusted_state_dim, action_dim, reward_dim, net_complex_enc_dec)
         elif encoder_type == 'TrajectoryMLP':
-            self.shared_encoder = SharedEncoderTrajectoryMLP(state_dim, action_dim, reward_dim, net_complex_enc_dec,
+            self.shared_encoder = SharedEncoderTrajectoryMLP(adjusted_state_dim, action_dim, reward_dim, net_complex_enc_dec,
                                                              time_steps)
         elif encoder_type == 'GRU':
-            self.shared_encoder = SharedEncoderGRU(state_dim, action_dim, reward_dim, net_complex_enc_dec)
+            self.shared_encoder = SharedEncoderGRU(adjusted_state_dim, action_dim, reward_dim, net_complex_enc_dec)
         elif encoder_type == 'Conv':
-            self.shared_encoder = SharedEncoderConv(state_dim, action_dim, reward_dim, net_complex_enc_dec)
+            self.shared_encoder = SharedEncoderConv(adjusted_state_dim, action_dim, reward_dim, net_complex_enc_dec)
         elif encoder_type == 'FCN':
-            self.shared_encoder = SharedEncoderFCN(state_dim, action_dim, reward_dim, net_complex_enc_dec)
+            self.shared_encoder = SharedEncoderFCN(adjusted_state_dim, action_dim, reward_dim, net_complex_enc_dec)
         else:
             raise ValueError(f'Unknown encoder type "{encoder_type}"')
 
@@ -118,6 +141,9 @@ class Encoder(nn.Module):
             if padding_mask is None:
                 raise ValueError('Padding should be excluded, but no padding_mask is specified. This is likely a bug.')
 
+        # Do state preprocessing on obs and next_obs. If state_preprocessing is deactivated, this will amount to NoOp
+        x[0] = self.state_preprocessor(x[0])
+        x[3] = self.state_preprocessor(x[3])
         # Compute shared encoder forward pass
         # Just encode everything at once; if necessary, the shared_encoder must take the padding_mask into account.
         x = torch.cat(x, dim=-1)
@@ -229,16 +255,19 @@ class DecoderMDP(nn.Module):
                  net_complex,
                  state_reconstruction_clip,
                  use_state_decoder,
+                 state_preprocessor: StateEncoder,
                  use_next_state_for_reward=False):
         super(DecoderMDP, self).__init__()
 
-        self.state_decoder_input_size = state_dim + action_dim + z_dim
+        self.state_preprocessor = state_preprocessor
+        self.adjusted_state_dim = self.state_preprocessor.output_dim
+        self.state_decoder_input_size = self.adjusted_state_dim + action_dim + z_dim
         self.state_decoder_hidden_size = int(self.state_decoder_input_size * net_complex)
         
         self.use_next_state_for_reward = use_next_state_for_reward
-        self.reward_decoder_input_size = state_dim + action_dim + z_dim
+        self.reward_decoder_input_size = self.adjusted_state_dim + action_dim + z_dim
         if self.use_next_state_for_reward:
-            self.reward_decoder_input_size = self.reward_decoder_input_size + state_dim
+            self.reward_decoder_input_size = self.reward_decoder_input_size + self.adjusted_state_dim
         self.reward_decoder_hidden_size = int(self.reward_decoder_input_size * net_complex)
         self.state_reconstruction_clip = state_reconstruction_clip
         self.use_state_decoder = use_state_decoder
@@ -259,6 +288,8 @@ class DecoderMDP(nn.Module):
         )
 
     def forward(self, state, action, next_state, z, padding_mask=None):
+        state = self.state_preprocessor(state)
+        next_state = self.state_preprocessor(next_state)
         if self.use_state_decoder:
             state_estimate = self.net_state_decoder(torch.cat([state, action, z], dim=-1))
         else:

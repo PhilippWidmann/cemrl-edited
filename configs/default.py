@@ -91,6 +91,7 @@ default_config = dict(
         beta_kl_y=1e-3,  # # weighting factor KL loss of y distribution vs prior
         alpha_kl_z_query=None,  # weighting factor KL loss of z distribution (context vs query)
         beta_kl_y_query=None,  # # weighting factor KL loss of y distribution (context vs query)
+        state_preprocessing_dim=0,  # Output dim of a shared state preprocessor in encoder and decoder. Deactivated if dim=0
         net_complex_enc_dec=10.0,  # determines overall net complextity in encoder and decoder (shared_dim = net_complex_enc_dec * input_dim)
         factor_qf_loss=1.0,  # weighting of state and reward loss compared to Qfunction in combination trainer
         train_val_percent=0.8,  # percentage of train samples vs. validation samples

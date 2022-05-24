@@ -111,6 +111,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         latent_dim,
         variant['algo_params']['batch_size_reconstruction'],
         num_classes,
+        variant['reconstruction_params']['state_preprocessing_dim'],
         time_steps,
         variant['algo_params']['encoder_merge_mode'],
         relevant_input_indices=variant['algo_params']['encoder_omit_input']
@@ -129,6 +130,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         net_complex_enc_dec,
         variant['env_params']['state_reconstruction_clip'],
         variant['env_params']['use_state_decoder'],
+        encoder.state_preprocessor,
         variant['reconstruction_params']['use_next_state_for_reward_decoder'],
     )
 
@@ -409,7 +411,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/ant-target/ant-stationary-target-exploration.json")#cheetah-target/cheetah-stationary-target-exploration.json")#toy-goal/toy-goal-line.json")
+@click.argument('config', default="configs/debug-cheetah.json")#cheetah-target/cheetah-stationary-target-exploration.json")#toy-goal/toy-goal-line.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)

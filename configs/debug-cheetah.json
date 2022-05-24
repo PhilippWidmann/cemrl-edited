@@ -63,6 +63,7 @@
         "beta_kl_y": 0.01,
         "alpha_kl_z_query": 0.001,
         "beta_kl_y_query": 0.001,
+        "state_preprocessing_dim": 2,
         "net_complex_enc_dec": 10.0,
         "factor_qf_loss": 1.0,
         "train_val_percent": 0.8,
