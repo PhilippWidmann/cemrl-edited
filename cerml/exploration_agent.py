@@ -30,22 +30,39 @@ def construct_exploration_agent(exploration_type,
                                 experiment_log_dir,
                                 max_timesteps,
                                 exploration_pretraining_steps,
-                                num_exploration_ensemble_agents):
+                                exploration_epoch_training_steps,
+                                state_preprocessor,
+                                num_exploration_ensemble_agents,
+                                showcase_itr):
     if exploration_type == 'counterfactual_task':
         return CounterfactualTaskExplorationAgent(policy,
                                                   replay_buffer)
     elif 'ensemble_urlb' in exploration_type:
         exploration_type = exploration_type.replace('ensemble_urlb', 'urlb')
-        return EnsembleURLBAgent(num_exploration_ensemble_agents, env_name, env_args, exploration_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps)
+        return EnsembleURLBAgent(num_exploration_ensemble_agents, env_name, env_args, exploration_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps, exploration_epoch_training_steps, showcase_itr, state_preprocessor)
     elif 'urlb' in exploration_type:
-        return URLBAgent(env_name, env_args, exploration_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps)
+        return URLBAgent(env_name, env_args, exploration_type, experiment_log_dir, max_timesteps, exploration_pretraining_steps, exploration_epoch_training_steps, showcase_itr, state_preprocessor)
     else:
         return ToyGoalExplorationAgent(exploration_type,
                                        zigzag_max=25,
                                        step_size=1)
 
 
-class CounterfactualTaskExplorationAgent(nn.Module):
+class ExplorationAgent(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def get_action(self, *args, **kwargs):
+        raise NotImplementedError('The generic ExplorationAgent has no methods. Instantiate a subclass.')
+
+    def train_agent(self):
+        pass
+
+    def save_agent(self, epoch):
+        pass
+
+
+class CounterfactualTaskExplorationAgent(ExplorationAgent):
     def __init__(self,
                  policy,
                  replay_buffer
@@ -68,7 +85,7 @@ class CounterfactualTaskExplorationAgent(nn.Module):
         return a, a_info, np.array([None]), None
 
 
-class ToyGoalExplorationAgent(nn.Module):
+class ToyGoalExplorationAgent(ExplorationAgent):
     def __init__(self,
                  exploration_type,
                  zigzag_max=25,
@@ -108,7 +125,7 @@ class ToyGoalExplorationAgent(nn.Module):
         return np.array([action]), action_info, np.array([None]), None
 
 
-class URLBAgent(nn.Module):
+class URLBAgent(ExplorationAgent):
     def __init__(self,
                  env_name,
                  env_args,
@@ -116,7 +133,10 @@ class URLBAgent(nn.Module):
                  experiment_log_dir,
                  max_timesteps,
                  pretraining_steps,
-                 ensemble_id=None
+                 epoch_training_steps,
+                 showcase_itr,
+                 state_preprocessor,
+                 ensemble_id=None,
                  ):
         super().__init__()
         # Expect the specific agent to be specified in the format urlb_rnd
@@ -127,6 +147,10 @@ class URLBAgent(nn.Module):
             raise ValueError('Specific URLB agent unspecified or not understood.')
         self.agent_type = agent_type
         self.pretraining_steps = pretraining_steps
+        self.epoch_training_steps = epoch_training_steps
+        self.showcase_itr = showcase_itr
+        self.state_preprocessor = state_preprocessor
+        self.agent_type = agent_type
 
         self.workdir = os.path.join(experiment_log_dir, 'exploration')
         if not os.path.exists(self.workdir):
@@ -150,15 +174,28 @@ class URLBAgent(nn.Module):
                         f'snapshots={[pretraining_steps]}',
                         f'snapshot_dir="."']
         print('Initializing exploration agent')
-        self.workspace, self.trained = generate_model(self.train_env, self.eval_env, cfg_override, self.workdir, snapshot_itr=pretraining_steps,
+        self.workspace, self.trained = generate_model(self.train_env, self.eval_env, cfg_override, self.workdir, snapshot_itr=self.showcase_itr,
                                                       snapshot_prefix=f'agent_{ensemble_id}_' if ensemble_id is not None else '')
+        if agent_type == 'smm_autodim':
+            self.workspace.agent.delayed_init(state_preprocessor)
         if self.trained:
             print('Loaded exploration agent from file')
         else:
             print("Pretraining exploration agent")
-            self.workspace.train()
+            self.train_agent(additional_frames=0)
             self.trained = True
-            print("Finished exploration agent pretraining")
+
+    def train_agent(self, additional_frames=None, agent_id=''):
+        additional_frames = self.epoch_training_steps if additional_frames is None else additional_frames
+        print(f"Training exploration agent {agent_id}")
+        if self.agent_type == 'smm_autodim':
+            self.state_preprocessor.to(self.workspace.device)
+        self.workspace.train(additional_frames=additional_frames, save_snapshots=False)
+        if self.agent_type == 'smm_autodim':
+            self.state_preprocessor.to(ptu.device)
+
+    def save_agent(self, epoch):
+        self.workspace.save_snapshot(epoch)
 
     def get_action(self, encoder_input, state, input_padding=None, deterministic=False, z_debug=None, env=None,
                    return_distributions=False, agent_info=None):
@@ -213,7 +250,7 @@ class URLBAgent(nn.Module):
             return self._action_spec
 
 
-class EnsembleURLBAgent(nn.Module):
+class EnsembleURLBAgent(ExplorationAgent):
     def __init__(self,
                  num_ensemble_agents,
                  *args,
@@ -232,3 +269,11 @@ class EnsembleURLBAgent(nn.Module):
         action, agent_info, task, base_task = self.agents[id].get_action(*args, agent_info=agent_info, **kwargs)
         agent_info['ensemble_agent'] = id
         return action, agent_info, task, base_task
+
+    def train_agent(self):
+        for i in range(len(self.agents)):
+            self.agents[i].train_agent(self.agent_ids[i])
+
+    def save_agent(self, epoch):
+        for a in self.agents:
+            a.save_agent(epoch)

@@ -21,6 +21,7 @@ class CEMRLAlgorithm:
                  policy_trainer,
                  relabeler,
                  agent,
+                 exploration_agent,
                  networks,
                  train_tasks,
                  test_tasks,
@@ -52,6 +53,7 @@ class CEMRLAlgorithm:
         self.policy_trainer = policy_trainer
         self.relabeler = relabeler
         self.agent = agent
+        self.exploration_agent = exploration_agent
         self.networks = networks
 
         self.train_tasks = train_tasks
@@ -155,7 +157,11 @@ class CEMRLAlgorithm:
                     self.encoding_debugger.record_debug_info(self.num_reconstruction_steps)
                 gt.stamp('debug_encoding')
 
-                # 4. train policy via SAC with data from the replay buffer
+                # 4.a Train exploration agent
+                if self.use_exploration_agent:
+                    self.exploration_agent.train_agent()
+
+                # 4.b train policy via SAC with data from the replay buffer
                 print("Policy Trainer ...")
                 temp, sac_stats = self.policy_trainer.train(self.num_policy_steps)
                 tabular_statistics.update(sac_stats)
@@ -186,6 +192,9 @@ class CEMRLAlgorithm:
             logger.save_itr_params(epoch, params)
 
             if epoch in logger._snapshot_points:
+                # Save exploration agent (for those agents that require it)
+                if self.use_exploration_agent:
+                    self.exploration_agent.save_agent(epoch)
                 # store encoding
                 # if we don't use the relabeler, the encodings are inaccurate and should not be used
                 if self.use_relabeler:
