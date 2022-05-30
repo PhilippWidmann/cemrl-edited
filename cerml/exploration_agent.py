@@ -174,18 +174,18 @@ class URLBAgent(ExplorationAgent):
                         f'snapshots={[pretraining_steps]}',
                         f'snapshot_dir="."']
         print('Initializing exploration agent')
-        self.workspace, self.trained = generate_model(self.train_env, self.eval_env, cfg_override, self.workdir, snapshot_itr=self.showcase_itr,
-                                                      snapshot_prefix=f'agent_{ensemble_id}_' if ensemble_id is not None else '')
+        self.workspace, self.pretrained = generate_model(self.train_env, self.eval_env, cfg_override, self.workdir, snapshot_itr=self.showcase_itr,
+                                                         snapshot_prefix=f'agent_{ensemble_id}_' if ensemble_id is not None else '')
         if agent_type == 'smm_autodim':
             self.workspace.agent.delayed_init(state_preprocessor)
-        if self.trained:
+        if self.pretrained:
             print('Loaded exploration agent from file')
-        else:
-            print("Pretraining exploration agent")
-            self.train_agent(additional_frames=0)
-            self.trained = True
 
     def train_agent(self, additional_frames=None, agent_id=''):
+        if not self.pretrained:
+            print("Pretraining exploration agent")
+            self.pretrained = True  # Have to set "pretrained" before training, otherwise we run into a recursion cycle
+            self.train_agent(additional_frames=0)
         additional_frames = self.epoch_training_steps if additional_frames is None else additional_frames
         print(f"Training exploration agent {agent_id}")
         if self.agent_type == 'smm_autodim':
@@ -272,7 +272,7 @@ class EnsembleURLBAgent(ExplorationAgent):
 
     def train_agent(self):
         for i in range(len(self.agents)):
-            self.agents[i].train_agent(self.agent_ids[i])
+            self.agents[i].train_agent(agent_id=self.agent_ids[i])
 
     def save_agent(self, epoch):
         for a in self.agents:
