@@ -192,7 +192,6 @@ def initialize_networks(variant, env, experiment_log_dir):
             experiment_log_dir if variant['path_to_weights'] is None else variant['path_to_weights'],
             variant['algo_params']['max_path_length'],
             variant['algo_params']['exploration_pretraining_steps'],
-            variant['algo_params']['exploration_epoch_training_steps'],
             encoder.state_preprocessor,
             variant['algo_params']['exploration_ensemble_agents'],
             variant['showcase_itr']
@@ -360,6 +359,9 @@ def initialize_networks(variant, env, experiment_log_dir):
         test_tasks,
 
         variant['algo_params']['num_train_epochs'],
+        variant['algo_params']['exploration_pretraining_epochs'],
+        variant['algo_params']['exploration_pretraining_epoch_steps'],
+        variant['algo_params']['exploration_epoch_steps'],
         variant['algo_params']['num_reconstruction_steps'],
         variant['algo_params']['num_policy_steps'],
         variant['algo_params']['num_train_tasks_per_episode'],
@@ -415,7 +417,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/debug-cheetah.json")#"configs/cheetah-target/cheetah-stationary-target-exploration-2.json")#toy-goal/toy-goal-line.json")
+@click.argument('config', default="configs/debug-cheetah.json")#"configs/cheetah-target/cheetah-stationary-target-exploration-auto.json")#toy-goal/toy-goal-line.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)

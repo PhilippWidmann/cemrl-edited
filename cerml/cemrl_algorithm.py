@@ -27,6 +27,9 @@ class CEMRLAlgorithm:
                  test_tasks,
 
                  num_epochs,
+                 num_exploration_pretraining_epochs,
+                 num_exploration_pretraining_steps,
+                 num_exploration_steps,
                  num_reconstruction_steps,
                  num_policy_steps,
                  num_train_tasks_per_episode,
@@ -60,6 +63,9 @@ class CEMRLAlgorithm:
         self.test_tasks = test_tasks
 
         self.num_epochs = num_epochs
+        self.num_exploration_pretraining_epochs = num_exploration_pretraining_epochs
+        self.num_exploration_pretraining_steps = num_exploration_pretraining_steps
+        self.num_exploration_steps = num_exploration_steps
         self.num_reconstruction_steps = num_reconstruction_steps
         self.num_policy_steps = num_policy_steps
         self.num_initial_collection_cycles_per_task = num_initial_collection_cycles_per_task
@@ -86,6 +92,26 @@ class CEMRLAlgorithm:
         params = self.get_epoch_snapshot()
         logger.save_itr_params(-1, params)
         previous_epoch_end = 0
+
+        print('Pretraining exploration agent')
+        if self.use_exploration_agent:
+            for epoch in range(self.num_exploration_pretraining_epochs):
+                # 1. collect data with rollout coordinator
+                print("Collecting samples ...")
+                data_collection_tasks = np.random.permutation(self.train_tasks)[:self.num_train_tasks_per_episode]
+                self._n_env_steps_total += \
+                    self.rollout_coordinator.collect_replay_data(
+                        data_collection_tasks,
+                        max_trajs=0,
+                        max_trajs_exploration=self.num_exploration_trajectories_per_task+self.num_trajectories_per_task
+                    )
+                # 2. encoder - decoder training with reconstruction trainer
+                print("Reconstruction Trainer ...")
+                self.reconstruction_trainer.train(self.num_reconstruction_steps)
+
+                # 3. Train exploration agent
+                self.exploration_agent.train_agent(steps=self.num_exploration_pretraining_steps)
+                print(f'Finished exploration pretraining epoch {epoch}\n')
 
         print("Collecting initial samples ...")
         for i in range(self.num_initial_collection_cycles_per_task):
@@ -159,7 +185,7 @@ class CEMRLAlgorithm:
 
                 # 4.a Train exploration agent
                 if self.use_exploration_agent:
-                    self.exploration_agent.train_agent()
+                    self.exploration_agent.train_agent(steps=self.num_exploration_steps)
 
                 # 4.b train policy via SAC with data from the replay buffer
                 print("Policy Trainer ...")
