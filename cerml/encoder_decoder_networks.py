@@ -40,15 +40,19 @@ class StateEncoder(nn.Module):
     def __init__(self,
                  state_dim,
                  state_preprocessing_dim,
-                 net_complex_enc_dec
+                 net_complex_enc_dec,
+                 simplified_state_preprocessor
                  ):
         super().__init__()
         self.output_dim = state_preprocessing_dim if state_preprocessing_dim != 0 else state_dim
         if state_preprocessing_dim != 0:
             hidden_dim = int(net_complex_enc_dec * state_dim)
-            self.layers = torch.nn.Sequential(nn.Linear(state_dim, hidden_dim),
-                                              nn.ReLU(),
-                                              nn.Linear(hidden_dim, state_preprocessing_dim))
+            if simplified_state_preprocessor:
+                self.layers = nn.Linear(state_dim, state_preprocessing_dim)
+            else:
+                self.layers = torch.nn.Sequential(nn.Linear(state_dim, hidden_dim),
+                                                  nn.ReLU(),
+                                                  nn.Linear(hidden_dim, state_preprocessing_dim))
         else:
             self.layers = nn.Identity()
 
@@ -68,6 +72,7 @@ class Encoder(nn.Module):
                  batch_size,
                  num_classes,
                  state_preprocessing_dim=0,
+                 simplified_state_preprocessor=False,
                  time_steps=None,
                  merge_mode=None,
                  **kwargs
@@ -81,7 +86,7 @@ class Encoder(nn.Module):
         self.merge_mode = merge_mode
         self.always_exclude_padding = encoder_exclude_padding
 
-        self.state_preprocessor = StateEncoder(state_dim, state_preprocessing_dim, net_complex_enc_dec)
+        self.state_preprocessor = StateEncoder(state_dim, state_preprocessing_dim, net_complex_enc_dec, simplified_state_preprocessor)
         adjusted_state_dim = self.state_preprocessor.output_dim
         if encoder_type == 'TimestepMLP':
             self.shared_encoder = SharedEncoderTimestepMLP(adjusted_state_dim, action_dim, reward_dim, net_complex_enc_dec)

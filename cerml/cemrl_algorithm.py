@@ -93,8 +93,10 @@ class CEMRLAlgorithm:
         logger.save_itr_params(-1, params)
         previous_epoch_end = 0
 
-        print('Pretraining exploration agent')
         if self.use_exploration_agent:
+            # Do initial pretraining according to the number of steps the exploration agent was initialized with
+            self.exploration_agent.train_agent(steps=0)
+            print('Pretraining exploration agent')
             for epoch in range(self.num_exploration_pretraining_epochs):
                 # 1. collect data with rollout coordinator
                 print("Collecting samples ...")
@@ -219,7 +221,8 @@ class CEMRLAlgorithm:
 
             if epoch in logger._snapshot_points:
                 # Save exploration agent (for those agents that require it)
-                if self.use_exploration_agent:
+                # Also: Only save initial agent if it is not trained further during epochs to save space
+                if self.use_exploration_agent and (epoch == 0 or self.num_exploration_steps > 0):
                     self.exploration_agent.save_agent(epoch)
                 # store encoding
                 # if we don't use the relabeler, the encodings are inaccurate and should not be used
