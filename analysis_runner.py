@@ -113,10 +113,10 @@ def analysis(variant):
         for plot_spec in variant['analysis_params']['single_episode_plots']:
             plot_spec_dict = get_plot_specification(plot_spec)
             for case in cases:
-                fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
+                fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(6, 5*len(plot_spec_dict)), squeeze=False)
                 for i, ax in enumerate(axes.flat):
                     p = plot_spec_dict[i]
-                    fig, ax = plot_per_episode(results_dict[type][case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
+                    fig, ax = plot_per_episode(results_dict[type][case], p['y'], p['scatter'], p['const'], p['fill'], p['x'], fig_ax=(fig, ax))
 
                 fig.tight_layout()
                 all_figures.append((fig, axes))
@@ -132,11 +132,11 @@ def analysis(variant):
 
         for plot_spec in variant['analysis_params']['multiple_episode_plots']:
             plot_spec_dict = get_plot_specification(plot_spec)
-            fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(10, 5*len(plot_spec_dict)), squeeze=False)
+            fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(6, 5*len(plot_spec_dict)), squeeze=False)
             for case in cases:
                 for i, ax in enumerate(axes.flat):
                     p = plot_spec_dict[i]
-                    fig, ax = plot_per_episode(results_dict[type][case], p['y'], p['y_const'], p['y_fill'], p['x'], fig_ax=(fig, ax))
+                    fig, ax = plot_per_episode(results_dict[type][case], p['y'], p['scatter'], p['const'], p['fill'], p['x'], fig_ax=(fig, ax))
 
             fig.tight_layout()
             all_figures.append((fig, axes))

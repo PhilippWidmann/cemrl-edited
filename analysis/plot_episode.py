@@ -46,17 +46,19 @@ def get_plot_specification(specifications):
 
     plots = []
     for plot_spec in specifications:
-        y_const, y_fill = None, None
+        scatter, const, fill = None, None, None
         if '_fill_' in plot_spec:
-            plot_spec, y_fill = plot_spec.split('_fill_')
+            plot_spec, fill = plot_spec.split('_fill_')
         if '_const_' in plot_spec:
-            plot_spec, y_const = plot_spec.split('_const_')
+            plot_spec, const = plot_spec.split('_const_')
+        if '_scatter_' in plot_spec:
+            plot_spec, scatter = plot_spec.split('_scatter_')
         x, y = plot_spec.split('_vs_')
-        plots.append({'x': x, 'y': y, 'y_const': y_const, 'y_fill': y_fill})
+        plots.append({'x': x, 'y': y, 'scatter': scatter, 'const': const, 'fill': fill})
     return plots
 
 
-def plot_per_episode(results, y, y_const=None, y_fill=None, x='time', fig_ax=None):
+def plot_per_episode(results, y, scatter=None, const=None, fill=None, x='time', fig_ax=None):
     if fig_ax is not None:
         fig, ax = fig_ax
     else:
@@ -66,13 +68,22 @@ def plot_per_episode(results, y, y_const=None, y_fill=None, x='time', fig_ax=Non
     data_y = get_quantity(results, y)
 
     p = ax.plot(data_x, data_y)
-    if y_fill is not None:
+    if fill is not None:
+        x_fill, y_fill = fill.split('_vs_')
         # Skip the 0-th timestep, since the "informationless" encoding can have very large variance
+        data_x_fill = get_quantity(results, x_fill)
         data_y_fill = get_quantity(results, y_fill)
-        ax.fill_between(data_x[1:], (data_y - data_y_fill)[1:], (data_y + data_y_fill)[1:], color=p[-1].get_color(), alpha=0.3)
-    if y_const is not None:
+        ax.fill_between(data_x_fill[1:], (data_y - data_y_fill)[1:], (data_y + data_y_fill)[1:], color=p[-1].get_color(), alpha=0.3)
+    if const is not None:
+        x_const, y_const = const.split('_vs_')
+        data_x_const = get_quantity(results, x_const)
         data_y_const = get_quantity(results, y_const)
-        ax.plot(data_x, data_y_const, color=p[-1].get_color(), linestyle='--')
+        ax.plot(data_x_const, data_y_const, color=p[-1].get_color(), linestyle='--')
+    if scatter is not None:
+        x_scatter, y_scatter = scatter.split('_vs_')
+        data_x_scatter = get_quantity(results, x_scatter)
+        data_y_scatter = get_quantity(results, y_scatter)
+        ax.scatter(data_x_scatter, data_y_scatter, color=p[-1].get_color())
 
     ax.set_xlabel(x.replace('_', ' '))
     ax.set_ylabel(y.replace('_', ' '))

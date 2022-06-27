@@ -25,5 +25,6 @@ __pycache__
 /local/
 /output/
 /output_analysis/
+/output_analysis_old/
 /output_old/
 /analysis/figures
