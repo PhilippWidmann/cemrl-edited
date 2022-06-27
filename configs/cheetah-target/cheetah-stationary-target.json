@@ -28,7 +28,7 @@
         "batch_size_policy": 256,
         "batch_size_relabel": 1024,
         "time_steps": 30,
-        "decoder_time_window": [-Infinity, Infinity],
+        "decoder_time_window": [-30, 30],
         "latent_size": 1,
         "sac_layer_size": 300,
         "max_replay_buffer_size": 10000000,

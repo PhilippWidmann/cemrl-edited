@@ -1,7 +1,6 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='./output/toy-goal-plane/2022_05_20_05_09_28',  # CONFIGURE! path to experiment folder
-    save_dir='./output_analysis/toy-goal-plane/2022_05_20_05_09_28',
+    path_to_weights='./output/toy-goal-plane/2022_05_19_02_46_15',  # CONFIGURE! path to experiment folder
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
     showcase_itr=[0, 5, 10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500],  # CONFIGURE! epoch for which analysis is performed#[0, 5, 10, 25, 50, 75, 100],#
     util_params=dict(
@@ -19,7 +18,7 @@ analysis_config = dict(
         include_exploration_examples=False,
         single_episode_plots=[],
         #multiple_episode_plots=[['pos[0]_vs_pos[1]'],],
-        multiple_episode_plots=[['time_vs_task_indicators[0]', 'time_vs_task_indicators[1]', 'time_vs_rewards', 'time_vs_pos[0]_const_specification[0]', 'time_vs_pos[1]_const_specification[1]'],],
+        multiple_episode_plots=[['task_indicators[0]_vs_task_indicators[1]', 'time_vs_rewards', 'pos[0]_vs_pos[1]_scatter_specification[0]_vs_specification[1]']],
         log_and_plot_progress=False,  # CONFIGURE! If True: experiment will be logged to the experiment_database.json and plotted, If already logged: plot only
         save=True,  # CONFIGURE! If True: plots of following options will be saved to the experiment folder
         show=False,

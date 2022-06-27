@@ -1,7 +1,7 @@
 {
     "env_name": "toy-goal-plane",
     "env_params": {
-        "n_train_tasks": 40,
+        "n_train_tasks": 100,
         "n_eval_tasks": 40,
         "n_grid_tasks": 0,
         "use_normalized_env": false,
@@ -23,7 +23,7 @@
         "encoder_type": "GRU",
         "encoder_exclude_padding": false,
         "exploration_agent": "ensemble_urlb_smm",
-        "exploration_pretraining_steps": 30000,
+        "exploration_pretraining_steps": 100000,
         "exploration_ensemble_agents": 3,
         "sac_uses_exploration_data": false,
         "use_fixed_seeding": true,
