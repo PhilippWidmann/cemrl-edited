@@ -49,7 +49,7 @@
         "num_train_tasks_per_episode": 20,
         "num_initial_collection_cycles_per_task": 0,
         "num_trajectories_per_task": 1,
-        "num_exploration_trajectories_per_task": 1,
+        "num_exploration_trajectories_per_task": 2,
         "num_eval_trajectories": 1,
         "showcase_every": 0,
         "num_showcase_deterministic": 1,
