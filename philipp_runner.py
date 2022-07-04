@@ -1,6 +1,7 @@
 # Continuous Environment Meta Reinforcement Learning (CEMRL)
 
 import os
+from pathlib import Path
 import numpy as np
 import click
 import json
@@ -43,7 +44,7 @@ def setup_environment(variant):
     # create logging directory
     encoding_save_epochs = [0, 5, 10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450,
                             475, 500, 600, 750, 1000, 1250, 1500, 1750, 2000, 3000, 5000, 10000, 15000, 20000]
-    experiment_log_dir = setup_logger(variant['env_name'], variant=variant, exp_id=None,
+    experiment_log_dir = setup_logger(variant['config_name'], variant=variant, exp_id=None,
                                       base_log_dir=variant['util_params']['base_log_dir'], snapshot_mode='specific',
                                       snapshot_gap=variant['algo_params']['snapshot_gap'],
                                       snapshot_points=encoding_save_epochs)
@@ -419,7 +420,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/old/toy-goal/toy-goal-line.json")
+@click.argument('config', default="configs/cheetah-multi-task.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
@@ -447,6 +448,8 @@ def main(config, weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
         variant['path_to_weights'] = weights
     if weights_itr is not None:
         variant['showcase_itr'] = weights_itr
+
+    variant['config_name'] = Path(config).stem
 
     experiment(variant)
 

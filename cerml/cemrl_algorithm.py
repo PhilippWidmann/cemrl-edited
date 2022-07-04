@@ -205,6 +205,7 @@ class CEMRLAlgorithm:
 
                 # 4.a Train exploration agent
                 if self.use_exploration_agent:
+                    print("Exploration agent trainer ...")
                     self.exploration_agent.train_agent(steps=self.num_exploration_steps)
                 gt.stamp('exploration_agent')
 
