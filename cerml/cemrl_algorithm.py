@@ -188,6 +188,7 @@ class CEMRLAlgorithm:
                 # 4.a Train exploration agent
                 if self.use_exploration_agent:
                     self.exploration_agent.train_agent(steps=self.num_exploration_steps)
+                gt.stamp('exploration_agent')
 
                 # 4.b train policy via SAC with data from the replay buffer
                 print("Policy Trainer ...")
@@ -243,6 +244,7 @@ class CEMRLAlgorithm:
             tabular_statistics['time_reconstruction_trainer'] = times_itrs['reconstruction_trainer'][-1]
             tabular_statistics['time_relabeler'] = times_itrs['relabeler'][-1]
             tabular_statistics['time_debug_encoding'] = times_itrs['debug_encoding'][-1]
+            tabular_statistics['time_exploration_agent'] = times_itrs['exploration_agent'][-1]
             tabular_statistics['time_policy_trainer'] = times_itrs['policy_trainer'][-1]
             tabular_statistics['time_evaluation'] = times_itrs['evaluation'][-1]
             tabular_statistics['time_showcase'] = times_itrs['showcase'][-1]
