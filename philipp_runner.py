@@ -419,7 +419,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/toy-goal/toy-goal-line.json")
+@click.argument('config', default="configs/old/toy-goal/toy-goal-line.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
