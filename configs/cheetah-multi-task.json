@@ -1,0 +1,33 @@
+{
+    "env_name": "cheetah-multi-task",
+    "env_params": {
+        "n_train_tasks": 80,
+        "n_eval_tasks": 40,
+        "use_normalized_env": true,
+        "state_reconstruction_clip": 8,
+        "task_variants":  ["velocity_forward", "velocity_backward",
+			   "goal_forward", "goal_backward",
+			   "flip_forward", "jump",
+			   "stand_front", "stand_back"]
+    },
+    "algo_params": {
+        "batch_size_rollout": 512,
+        "time_steps": 32,
+        "latent_size": 8,
+        "num_training_steps_policy": 8,
+        "num_training_steps_reconstruction": 8,
+
+        "num_train_tasks_per_episode": 80,
+        "num_transitions_per_episode": 200,
+        "max_path_length": 200,
+
+        "augmented_start_percentage": 0,
+        "augmented_every": 1,
+
+        "_comment_num_showcase": 10,
+        "_comment_test_evaluation_every": 1
+    },
+    "reconstruction_params": {
+        "num_classes": 8
+    }
+}
