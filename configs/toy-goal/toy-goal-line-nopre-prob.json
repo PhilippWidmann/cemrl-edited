@@ -1,0 +1,51 @@
+{
+    "env_name": "toy-goal-line",
+    "env_params": {
+        "n_train_tasks": 100,
+        "n_eval_tasks": 40,
+        "n_grid_tasks": 0,
+        "use_normalized_env": false,
+        "state_reconstruction_clip": 12,
+        "use_state_decoder": false,
+        "change_steps": 1000,
+        "grid_mode": "none",
+        "step_size": 0.25,
+        "task_max_radius": 25.0,
+        "reward_radius": 1000.0,
+        "goal_radius": 0.2,
+        "goal_1d": true,
+        "one_side_goals": false
+    },
+    "algo_params": {
+        "use_data_normalization": false,
+        "exploration_agent": "ensemble_urlb_smm",
+        "exploration_pretraining_steps": 5000,
+        "exploration_ensemble_agents": 3,
+        "exploration_epoch_steps": 1000,
+        "sac_uses_exploration_data": true,
+        "exploration_by_probability": true,
+        "seed": 0,
+        "time_steps": 30,
+        "decoder_time_window": [-Infinity, Infinity],
+        "latent_size": 1,
+        "sac_layer_size": 300,
+        "sampling_mode": "linear",
+        "num_train_epochs": 151,
+        "snapshot_gap": 25,
+        "num_train_tasks_per_episode": 10,
+        "num_trajectories_per_task": 1,
+        "num_exploration_trajectories_per_task": 2,
+        "max_path_length": 200,
+        "sac_alpha": 1.0
+    },
+    "reconstruction_params": {
+        "prior_mode": "fixedOnY",
+        "prior_sigma": 0.5,
+        "num_classes": 1,
+        "lr_encoder": 0.0003,
+        "lr_decoder": 0.0003,
+        "alpha_kl_z": 0.001,
+        "beta_kl_y": 0.001,
+        "net_complex_enc_dec": 25.0
+    }
+}
