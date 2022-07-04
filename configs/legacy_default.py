@@ -46,6 +46,7 @@ legacy_default_config = dict(
         exploration_epoch_steps=0,
         exploration_ensemble_agents=1,
         sac_uses_exploration_data=False,
+        exploration_by_probability=False,
         use_fixed_seeding=True,  # seeding, make comparison more robust
         seed=0,  # seed for torch and numpy
         batch_size_reconstruction=256,  # batch size reconstruction trainer

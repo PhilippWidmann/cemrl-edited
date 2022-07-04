@@ -44,6 +44,7 @@ class CEMRLAlgorithm:
                  use_relabeler,
                  use_combination_trainer,
                  use_exploration_agent,
+                 exploration_by_probability,
                  experiment_log_dir,
                  latent_dim,
 
@@ -76,6 +77,8 @@ class CEMRLAlgorithm:
         self.use_relabeler = use_relabeler
         self.use_combination_trainer = use_combination_trainer
         self.use_exploration_agent = use_exploration_agent
+        self.exploration_by_probability = exploration_by_probability
+        self.exploration_probability = 1,
         self.experiment_log_dir = experiment_log_dir
         self.latent_dim = latent_dim
 
@@ -131,12 +134,27 @@ class CEMRLAlgorithm:
             print("Collecting samples ...")
             data_collection_tasks = np.random.permutation(self.train_tasks)[:self.num_train_tasks_per_episode]
             if self.use_exploration_agent:
-                self._n_env_steps_total += \
-                    self.rollout_coordinator.collect_replay_data(
-                        data_collection_tasks,
-                        max_trajs=self.num_trajectories_per_task,
-                        max_trajs_exploration=self.num_exploration_trajectories_per_task
-                    )
+                if self.exploration_by_probability:
+                    self.exploration_probability = 1 - epoch / self.num_epochs
+                    num_trajectories = self.num_trajectories_per_task + self.num_exploration_trajectories_per_task
+
+                    individual_exploration_trajectories = np.random.choice([0, 1],
+                                                                           size=[self.num_train_tasks_per_episode, num_trajectories],
+                                                                           p=[1-self.exploration_probability, self.exploration_probability]).sum(1).squeeze()
+
+                    for x in np.unique(individual_exploration_trajectories):
+                        self.rollout_coordinator.collect_replay_data(
+                                data_collection_tasks[individual_exploration_trajectories == x],
+                                max_trajs=num_trajectories - x,
+                                max_trajs_exploration=x
+                            )
+                else:
+                    self._n_env_steps_total += \
+                        self.rollout_coordinator.collect_replay_data(
+                            data_collection_tasks,
+                            max_trajs=self.num_trajectories_per_task,
+                            max_trajs_exploration=self.num_exploration_trajectories_per_task
+                        )
             else:
                 self._n_env_steps_total += \
                     self.rollout_coordinator.collect_replay_data(data_collection_tasks,
