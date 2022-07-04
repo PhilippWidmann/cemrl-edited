@@ -59,6 +59,8 @@ default_config = dict(
         latent_size=1,  # dimension of the latent context vector z
         sac_layer_size=300,  # layer size for SAC networks, value 300 taken from PEARL
         max_replay_buffer_size=10000000,  # write as integer!
+        data_usage_reconstruction=None,
+        data_usage_sac=None,
         sampling_mode=[None, 'linear'][0],  # determines how to choose samples from replay buffer
         num_last_samples=10000000,  # if data_usage_sac == 'cut, number of previous samples to be used
         permute_samples=False,  # if order of samples from previous timesteps should be permuted (avoid learning by heart)
