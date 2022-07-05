@@ -136,8 +136,20 @@ class RolloutCoordinator:
             eval_statistics[train_test + '_eval_min_reward' + deterministic_string] = eval_min_reward
             # success rates for meta world
             if "success" in results[0][0][0][0]["env_infos"][0]:
-                success_values = np.array([sum([timestep["success"] for timestep in path["env_infos"]]) for worker in results for task in worker for path in task[0]])
-                success_rate = np.sum((success_values > 0).astype(int)) / success_values.shape[0]
+                success_values = np.array([[timestep["success"] for timestep in path["env_infos"]] for worker in results for task in worker for path in task[0]])
+                episode_length = success_values.shape[1]
+                success_types = np.full(success_values.shape[0], 'base')
+                if 'success_type' in results[0][0][0][0]["env_infos"][0]:
+                    success_types = np.array([path["env_infos"][0]["success_type"] for worker in results for task in worker for path in task[0]])
+                    if not np.isin(success_types, ['base', 'end']).all():
+                        raise ValueError('Unknown success_type provided by environment')
+
+                success_trajectories = np.zeros(success_values.shape[0])
+                # base (default): Successful if any transition is successful; For tasks that cannot be consistently fulfilled, e.g. jumping to height
+                success_trajectories[success_types == 'base'] = np.sum(success_values[success_types == 'base'], axis=1) > 0
+                # end: Successful if of the last 20% of transition, at least half are successful. For e.g. goal reaching tasks
+                success_trajectories[success_types == 'end'] = np.sum(success_values[success_types == 'end', int(0.8*episode_length):], axis=1) > 0.1*episode_length
+                success_rate = np.sum(success_trajectories.astype(int)) / success_values.shape[0]
                 eval_statistics[train_test + '_eval_success_rate'] = success_rate
             if int(os.environ['DEBUG']) == 1:
                 print(train_test + ":")

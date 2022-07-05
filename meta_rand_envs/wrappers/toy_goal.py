@@ -126,6 +126,7 @@ class ToyGoalEnv(Env):
             return ob, reward, done, dict(true_task=dict(base_task=0, specification=self.goal['goal'][0]),
             # np.array([self.goal['goal'][0], self.goal['goal'][1], self.goal['angle'], self.goal['radius']])), TODO enable specification of higher dimension
                                           success=bool(np.linalg.norm(self._state[0] - self.goal['goal'][0]) < self.goal_radius),
+                                          success_type='end',
                                           pos=self._state[0])
         else:
             return ob, reward, done, dict(true_task=dict(base_task=0, specification=self.goal['goal']),
