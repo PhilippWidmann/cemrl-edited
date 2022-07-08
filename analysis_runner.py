@@ -344,6 +344,10 @@ def prepare_variant_file(analysis_goal_config):
     with open(os.path.join(os.path.join(path_to_folder, 'variant.json'))) as f:
         exp_params = json.load(f)
     variant["env_name"] = exp_params["env_name"]
+    if "config_name" in exp_params.keys():
+        variant["config_name"] = exp_params["config_name"]
+    else:
+        variant["config_name"] = exp_params["env_name"]
     variant["env_params"] = deep_update_dict(exp_params["env_params"], variant["env_params"])
     variant["algo_params"] = deep_update_dict(exp_params["algo_params"], variant["algo_params"])
     variant["reconstruction_params"] = deep_update_dict(exp_params["reconstruction_params"], variant["reconstruction_params"])
