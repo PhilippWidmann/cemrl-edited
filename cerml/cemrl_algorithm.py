@@ -143,11 +143,12 @@ class CEMRLAlgorithm:
                                                                            p=[1-self.exploration_probability, self.exploration_probability]).sum(1).squeeze()
 
                     for x in np.unique(individual_exploration_trajectories):
-                        self.rollout_coordinator.collect_replay_data(
-                                data_collection_tasks[individual_exploration_trajectories == x],
-                                max_trajs=num_trajectories - x,
-                                max_trajs_exploration=x
-                            )
+                        self._n_env_steps_total += \
+                            self.rollout_coordinator.collect_replay_data(
+                                    data_collection_tasks[individual_exploration_trajectories == x],
+                                    max_trajs=num_trajectories - x,
+                                    max_trajs_exploration=x
+                                )
                 else:
                     self._n_env_steps_total += \
                         self.rollout_coordinator.collect_replay_data(
