@@ -163,6 +163,7 @@ class NonStationaryGoalTargetEnv(NonStationaryMetaEnv):
     def __init__(self, *args, **kwargs):
         self.task_min_target = kwargs.get('task_min_target', 5.0)
         self.task_max_target = kwargs.get('task_max_target', 25.0)
+        self.goal_radius = kwargs.get('goal_radius', 0.5)
         NonStationaryMetaEnv.__init__(self, *args, **kwargs)
         self.active_task = 10.0
 
@@ -181,11 +182,12 @@ class NonStationaryGoalTargetEnv(NonStationaryMetaEnv):
         geom_rgba[1:, :3] = np.asarray(rgb_value_tuple)
         self.model.geom_rgba[:] = geom_rgba
 
-    def sample_tasks(self, num_tasks):
+    def sample_tasks(self, num_tasks, test=False):
         np.random.seed(1337)
-        targets = np.random.uniform(self.task_min_target, self.task_max_target, size=(num_tasks,))
-        # for tests
-        #targets = np.linspace(self.task_min_target, self.task_max_target, num_tasks)
+        if test:
+            targets = np.linspace(self.task_min_target, self.task_max_target, num_tasks)
+        else:
+            targets = np.random.uniform(self.task_min_target, self.task_max_target, size=(num_tasks,))
         tasks = [{'target': target} for target in targets]
         return tasks
 

@@ -16,10 +16,9 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         # should actually go into NonStationaryGoalTargetEnv, breaks abstraction
         self._init_geom_rgba = self.model.geom_rgba.copy()
 
-        num_tasks = kwargs['n_train_tasks'] + kwargs['n_eval_tasks']
-        self.tasks = self.sample_tasks(num_tasks)
-        self.train_tasks = self.tasks[:kwargs['n_train_tasks']]
-        self.test_tasks = self.tasks[kwargs['n_train_tasks']:]
+        self.train_tasks = self.sample_tasks(kwargs['n_train_tasks'])
+        self.test_tasks = self.sample_tasks(kwargs['n_eval_tasks'], test=True)
+        self.tasks = self.train_tasks + self.test_tasks
 
     def _compute_reward(self, action, xposafter):
         if not self.exploration_reward:
@@ -51,7 +50,9 @@ class HalfCheetahNonStationaryTargetEnv(NonStationaryGoalTargetEnv, MujocoEnv, u
         self.steps += 1
         return ob, reward, done, dict(reward_run=reward_run, reward_ctrl=reward_ctrl,
                                       true_task=dict(base_task=0, specification=self.active_task),
-                                      vector_to_target=vector_to_target, pos=xposafter)
+                                      vector_to_target=vector_to_target, pos=xposafter,
+                                      success=bool(np.linalg.norm(xposafter - self.active_task) < self.goal_radius),
+                                      success_type='end',)
 
     # from pearl
     def _get_obs(self):
