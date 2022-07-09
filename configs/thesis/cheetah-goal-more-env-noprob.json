@@ -1,0 +1,51 @@
+{
+    "env_name": "cheetah-stationary-targetTwosided",
+    "env_params": {
+        "n_train_tasks": 100,
+        "n_eval_tasks": 25,
+        "use_normalized_env": true,
+        "change_mode": "location",
+        "termination_possible": false,
+        "use_state_decoder": false,
+        "positive_change_point_basis": 1000000,
+        "negative_change_point_basis": -1000000,
+        "task_min_target": -25.0,
+        "task_max_target": 25.0,
+        "goal_radius": 2.0,
+        "change_point_interval": 1,
+        "state_reconstruction_clip": 8
+    },
+    "algo_params": {
+        "use_data_normalization": false,
+        "exploration_agent": "ensemble_urlb_smm_autodim",
+        "exploration_pretraining_steps": 0,
+        "exploration_pretraining_epochs": 20,
+        "exploration_pretraining_epoch_steps": 5000,
+        "exploration_epoch_steps": 0,
+        "exploration_ensemble_agents": 3,
+        "sac_uses_exploration_data": true,
+        "exploration_by_probability": false,
+        "seed": 0,
+        "time_steps": 30,
+        "decoder_time_window": [-Infinity, Infinity],
+        "latent_size": 1,
+        "sac_layer_size": 300,
+        "num_train_epochs": 501,
+        "num_train_tasks_per_episode": 20,
+        "num_trajectories_per_task": 1,
+        "num_exploration_trajectories_per_task": 2,
+        "max_path_length": 200
+    },
+    "reconstruction_params": {
+        "prior_mode": "fixedOnY",
+        "prior_sigma": 0.5,
+        "num_classes": 1,
+        "lr_encoder": 0.0003,
+        "lr_decoder": 0.0003,
+        "alpha_kl_z": 0.001,
+        "beta_kl_y": 0.001,
+        "state_preprocessing_dim": 1,
+        "simplified_state_preprocessor": true,
+        "net_complex_enc_dec": 20.0
+    }
+}

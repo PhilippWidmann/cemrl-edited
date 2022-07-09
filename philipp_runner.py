@@ -420,7 +420,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/thesis/cheetah-goal.json")
+@click.argument('config', default="configs/thesis/cheetah-goal-more-env.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)

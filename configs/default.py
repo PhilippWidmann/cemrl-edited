@@ -65,7 +65,7 @@ default_config = dict(
         num_last_samples=10000000,  # if data_usage_sac == 'cut, number of previous samples to be used
         permute_samples=False,  # if order of samples from previous timesteps should be permuted (avoid learning by heart)
         num_train_epochs=250,  # number of overall training epochs
-        snapshot_gap=20,  # interval to store weights of all networks like encoder, decoder, policy etc.
+        snapshot_gap=10,  # interval to store weights of all networks like encoder, decoder, policy etc.
         num_reconstruction_steps=5000,  # number of training steps in reconstruction trainer per training epoch
         num_policy_steps=2000,  # number of training steps in policy trainer per training epoch
         num_train_tasks_per_episode=100,  # number of training tasks from which data is collected per training epoch
