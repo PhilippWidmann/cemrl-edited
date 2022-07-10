@@ -45,6 +45,7 @@ class CEMRLAlgorithm:
                  use_combination_trainer,
                  use_exploration_agent,
                  exploration_by_probability,
+                 exploration_fixed_probability,
                  experiment_log_dir,
                  latent_dim,
 
@@ -78,7 +79,11 @@ class CEMRLAlgorithm:
         self.use_combination_trainer = use_combination_trainer
         self.use_exploration_agent = use_exploration_agent
         self.exploration_by_probability = exploration_by_probability
-        self.exploration_probability = 1,
+        self.exploration_fixed_probability = exploration_fixed_probability
+        if self.exploration_fixed_probability is not None:
+            self.exploration_probability = exploration_fixed_probability
+        else:
+            self.exploration_probability = 1,
         self.experiment_log_dir = experiment_log_dir
         self.latent_dim = latent_dim
 
@@ -135,7 +140,8 @@ class CEMRLAlgorithm:
             data_collection_tasks = np.random.permutation(self.train_tasks)[:self.num_train_tasks_per_episode]
             if self.use_exploration_agent:
                 if self.exploration_by_probability:
-                    self.exploration_probability = 1 - epoch / self.num_epochs
+                    if self.exploration_fixed_probability is None:
+                        self.exploration_probability = 1 - epoch / self.num_epochs
                     num_trajectories = self.num_trajectories_per_task + self.num_exploration_trajectories_per_task
 
                     individual_exploration_trajectories = np.random.choice([0, 1],

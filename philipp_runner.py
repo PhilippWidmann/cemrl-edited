@@ -379,6 +379,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['use_combination_trainer'],
         variant['algo_params']['exploration_agent'] is not None,
         variant['algo_params']['exploration_by_probability'],
+        variant['algo_params']['exploration_fixed_probability'],
         experiment_log_dir,
         latent_dim,
         encoding_debugger,
@@ -420,7 +421,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/thesis/cheetah-goal-more-env.json")
+@click.argument('config', default="configs/thesis/ablation_cheetah-goal/cheetah-goal-separateEpisodes.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)

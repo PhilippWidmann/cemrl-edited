@@ -46,6 +46,7 @@ default_config = dict(
         exploration_epoch_steps=0,
         exploration_ensemble_agents=1,
         exploration_by_probability=False,
+        exploration_fixed_probability=None,
         sac_uses_exploration_data=False,
         use_fixed_seeding=True,  # seeding, make comparison more robust
         seed=0,  # seed for torch and numpy
