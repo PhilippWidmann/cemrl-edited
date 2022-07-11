@@ -1,0 +1,53 @@
+{
+    "env_name": "toy-goal-plane",
+    "env_params": {
+        "n_train_tasks": 100,
+        "n_eval_tasks": 40,
+        "n_grid_tasks": 0,
+        "use_normalized_env": false,
+        "state_reconstruction_clip": 12,
+        "use_state_decoder": false,
+        "change_steps": 1000,
+        "grid_mode": "none",
+        "step_size": 0.25,
+        "task_max_radius": 25.0,
+        "reward_radius": 1000.0,
+        "goal_radius": 2.0,
+        "goal_1d": false,
+        "one_side_goals": false
+    },
+    "algo_params": {
+        "exploration_agent": "ensemble_urlb_smm",
+        "exploration_pretraining_steps": 100000,
+        "exploration_ensemble_agents": 3,
+        "sac_uses_exploration_data": true,
+        "seed": 0,
+        "batch_size_validation": 2048,
+        "time_steps": 30,
+        "decoder_time_window": [-Infinity, Infinity],
+        "latent_size": 2,
+        "sampling_mode": "linear",
+        "num_train_epochs": 501,
+        "num_train_tasks_per_episode": 20,
+        "num_initial_collection_cycles_per_task": 0,
+        "num_trajectories_per_task": 1,
+        "num_exploration_trajectories_per_task": 2
+    },
+    "reconstruction_params": {
+        "use_state_diff": false,
+        "component_constraint_learning": false,
+        "reconstruct_all_timesteps": true,
+        "prior_mode": "fixedOnY",
+        "prior_sigma": 0.5,
+        "num_classes": 1,
+        "lr_encoder": 0.0003,
+        "lr_decoder": 0.0003,
+        "alpha_kl_z": 0.001,
+        "beta_kl_y": 0.001,
+        "net_complex_enc_dec": 25.0,
+        "factor_qf_loss": 1.0,
+        "train_val_percent": 0.8,
+        "eval_interval": 50,
+        "early_stopping_threshold": 500
+    }
+}
