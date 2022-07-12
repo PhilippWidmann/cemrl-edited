@@ -141,7 +141,7 @@ class CEMRLAlgorithm:
             if self.use_exploration_agent:
                 if self.exploration_by_probability:
                     if self.exploration_fixed_probability is None:
-                        self.exploration_probability = 1 - epoch / self.num_epochs
+                        self.exploration_probability = min(max(1 - (2*epoch) / self.num_epochs, 0.1), 0.9)
                     num_trajectories = self.num_trajectories_per_task + self.num_exploration_trajectories_per_task
 
                     individual_exploration_trajectories = np.random.choice([0, 1],
