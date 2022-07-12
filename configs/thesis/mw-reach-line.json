@@ -12,9 +12,10 @@
     "algo_params": {
         "use_data_normalization": false,
         "exploration_agent": "ensemble_urlb_smm",
-        "exploration_pretraining_steps": 25000,
+        "exploration_pretraining_steps": 20000,
         "exploration_ensemble_agents": 3,
         "sac_uses_exploration_data": true,
+        "exploration_by_probability": true,
         "use_fixed_seeding": true,
         "seed": 0,
         "time_steps": 30,

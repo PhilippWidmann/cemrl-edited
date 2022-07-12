@@ -5,7 +5,7 @@
         "n_eval_tasks": 40,
         "n_grid_tasks": 0,
         "use_normalized_env": false,
-        "state_reconstruction_clip": 12,
+        "state_reconstruction_clip": 1,
         "use_state_decoder": false,
         "change_steps": 1000,
         "grid_mode": "none",

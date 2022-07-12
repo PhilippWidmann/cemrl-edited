@@ -57,6 +57,7 @@ class SawyerReachEnvV2AlternateGoal(SawyerReachEnvV2):
     def step(self, action):
         ob, reward, done, info = super().step(action)
         # Todo: Find a better way (e.g. choose a new random train task for each episode)
+        info['success_type'] = 'end'
         # This is a hack, since the object position can leak the target if the algorithm memorizes it for all train tasks
         ob[4:11] = 0
         ob[22:29] = 0
