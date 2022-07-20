@@ -42,9 +42,10 @@ class ToyGoalEnv(Env):
         self.random_policy = kwargs.get('random_policy', False)
 
         #####################################################
-        self.tasks = self.sample_tasks(kwargs['n_train_tasks'] + kwargs['n_eval_tasks'], grid_mode=self.grid_mode)  # is this correct?
-        self.train_tasks = self.tasks[:kwargs['n_train_tasks']]
-        self.test_tasks = self.tasks[kwargs['n_train_tasks']:]
+        #self.tasks = self.sample_tasks(kwargs['n_train_tasks'] + kwargs['n_eval_tasks'], grid_mode=self.grid_mode)  # is this correct?
+        self.train_tasks = self.sample_tasks(kwargs['n_train_tasks'])#, grid_mode=self.grid_mode)
+        self.test_tasks = self.sample_tasks(kwargs['n_eval_tasks'], grid_mode=self.grid_mode)
+        self.tasks = self.train_tasks + self.test_tasks
         self.grid_tasks = self.sample_tasks(kwargs['n_grid_tasks'], grid_mode="cartesian")
         self.tasks += self.grid_tasks
         self.last_idx = None
@@ -265,9 +266,13 @@ class ToyGoalEnv(Env):
         # geom_rgba[1:, :3] = np.asarray(rgb_value_tuple)
         # self.model.geom_rgba[:] = geom_rgba
 
-    def sample_tasks(self, num_tasks, grid_mode):
+    def sample_tasks(self, num_tasks, grid_mode=None):
         # TODO some of the angle/radius values might be broken in some cases as they are not used anyways
-        if grid_mode == 'cartesian':
+        if grid_mode == 'polar_thesis':
+            a = np.linspace(0, 2 * np.pi, num=num_tasks, endpoint=False)
+            r = int(num_tasks/2) * [0.4*self.task_max_radius, 0.4*self.task_max_radius]
+            goals = np.stack((r * np.cos(a), r * np.sin(a)), axis=-1)
+        elif grid_mode == 'cartesian':
             if self.goal_1d:
                 lin = np.linspace(self.task_goal_offset if self.one_side_goals else
                                   -(self.task_max_radius + self.task_goal_offset),

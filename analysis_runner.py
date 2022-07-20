@@ -53,10 +53,11 @@ def analysis(variant):
     path_to_folder = variant['path_to_weights']
     example_cases = variant['analysis_params']['example_cases']
     train_example_cases = variant['analysis_params']['train_example_cases']
-    exploration_cases = train_example_cases if variant['analysis_params']['include_exploration_examples'] else []
+    exploration_cases = list(range(variant['analysis_params']['num_exploration_cases']))#train_example_cases if variant['analysis_params']['include_exploration_examples'] else []
 
     save = variant['analysis_params']['save']
     show = variant['analysis_params']['show']
+    figsize = variant['analysis_params']['figsize'] if 'figsize' in variant['analysis_params'].keys() else (6, 5)
     if save:
         save_dir = variant['save_dir'] if variant['save_dir'] is not None else os.path.join(variant['path_to_weights'], 'analysis/')
         if not os.path.exists(save_dir):
@@ -86,7 +87,7 @@ def analysis(variant):
         results = rollout_coordinator.collect_data(train_tasks[train_example_case:train_example_case + 1], 'test',
                 deterministic=True, max_trajs=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True)
         results_dict['train'][train_example_case] = results[0][0][0][0]
-    for exploration_example_case in cases_dict['exploration']:
+    for exploration_example_case in exploration_cases:
         results = rollout_coordinator.collect_data(train_tasks[exploration_example_case:exploration_example_case + 1], 'test',
                 deterministic=True, max_trajs=0, max_trajs_exploration=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True,
                 compute_exploration_task_indicators=True)
@@ -113,7 +114,7 @@ def analysis(variant):
         for plot_spec in variant['analysis_params']['single_episode_plots']:
             plot_spec_dict = get_plot_specification(plot_spec)
             for case in cases:
-                fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(6, 5*len(plot_spec_dict)), squeeze=False)
+                fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(figsize[0], figsize[1]*len(plot_spec_dict)), squeeze=False)
                 for i, ax in enumerate(axes.flat):
                     p = plot_spec_dict[i]
                     fig, ax = plot_per_episode(results_dict[type][case], p['y'], p['scatter'], p['const'], p['fill'], p['x'], fig_ax=(fig, ax))
@@ -132,7 +133,7 @@ def analysis(variant):
 
         for plot_spec in variant['analysis_params']['multiple_episode_plots']:
             plot_spec_dict = get_plot_specification(plot_spec)
-            fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(6, 5*len(plot_spec_dict)), squeeze=False)
+            fig, axes = plt.subplots(nrows=len(plot_spec_dict), ncols=1, figsize=(figsize[0], figsize[1]*len(plot_spec_dict)), squeeze=False)
             for case in cases:
                 for i, ax in enumerate(axes.flat):
                     p = plot_spec_dict[i]
@@ -149,10 +150,10 @@ def analysis(variant):
             if show:
                 fig.show()
 
-    if len(all_figures) == 1:
-        return all_figures[0]
-    else:
-        return all_figures
+    #if len(all_figures) == 1:
+    #    return all_figures[0]
+    #else:
+    return all_figures
 
 
 """
@@ -353,19 +354,19 @@ def prepare_variant_file(analysis_goal_config):
     variant["reconstruction_params"] = deep_update_dict(exp_params["reconstruction_params"], variant["reconstruction_params"])
 
     # set other time steps than while training
-    if variant["analysis_params"]["manipulate_time_steps"]:
+    if "manipulate_time_steps" in variant['analysis_params'] and variant["analysis_params"]["manipulate_time_steps"]:
         variant["algo_params"]["time_steps"] = variant["analysis_params"]["time_steps"]
 
     # set other time steps than while training
-    if variant["analysis_params"]["manipulate_change_trigger"]:
+    if "manipulate_change_trigger" in variant['analysis_params'] and variant["analysis_params"]["manipulate_change_trigger"]:
         variant["env_params"] = deep_update_dict(variant["analysis_params"]["change_params"], variant["env_params"])
 
     # set other episode length than while training
-    if variant["analysis_params"]["manipulate_max_path_length"]:
+    if "manipulate_max_path_length" in variant['analysis_params'] and variant["analysis_params"]["manipulate_max_path_length"]:
         variant["algo_params"]["max_path_length"] = variant["analysis_params"]["max_path_length"]
 
     # set other task number than while training
-    if variant["analysis_params"]["manipulate_test_task_number"]:
+    if "manipulate_test_task_number" in variant['analysis_params'] and variant["analysis_params"]["manipulate_test_task_number"]:
         variant["env_params"]["n_eval_tasks"] = variant["analysis_params"]["test_task_number"]
 
     return variant
