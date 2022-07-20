@@ -421,7 +421,7 @@ def deep_update_dict(fr, to):
 
 
 @click.command()
-@click.argument('config', default="configs/thesis/ablation_cheetah-goal/cheetah-goal-separateEpisodes.json")
+@click.argument('config', default="configs/thesis/mw-reach-line.json")
 @click.option('--weights', default=None)
 @click.option('--weights_itr', default=None)
 @click.option('--gpu', default=None, type=int)
