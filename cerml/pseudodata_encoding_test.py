@@ -34,7 +34,7 @@ class PseudodataGenerator:
         self.obs_dim = 1
         self.action_dim = 1
 
-    def generate_episode(self, task_nr, target=None, modify_target=None, target_error=1.0, error_prob=1.0, mode='random_zigzag', dampen=1):
+    def generate_episode(self, task_nr, target=None, modify_target=None, target_error=0, error_prob=1.0, mode='overshoot', dampen=1):
         states = np.zeros((self.episode_length + 1, self.obs_dim))
         actions = np.zeros((self.episode_length, self.action_dim))
         rewards = np.zeros((self.episode_length, 1))
@@ -50,6 +50,12 @@ class PseudodataGenerator:
         final_target = target
         if modify_target:
             if np.random.uniform() <= error_prob:
+                if mode == 'overshoot':
+                    if np.random.uniform() < 0.5:
+                        mode = 'overshoot_plus'
+                    else:
+                        mode = 'overshoot_minus'
+
                 if mode == 'random':
                     final_target = np.random.choice(self.tasks)
                 elif mode == 'mirror':
@@ -64,6 +70,12 @@ class PseudodataGenerator:
                 elif mode == 'realistic':
                     intermediate_target = np.random.uniform(-7.5, 7.5)
                     final_target = target
+                elif mode == 'overshoot_plus':
+                    intermediate_target = 4/3*self.tasks[-1]
+                    final_target = 4/3*self.tasks[-1]
+                elif mode == 'overshoot_minus':
+                    intermediate_target = 4/3*self.tasks[0]
+                    final_target = 4/3*self.tasks[0]
                 else:
                     raise ValueError('Typo in mode')
             final_target = dampen * np.random.uniform(final_target - target_error, final_target + target_error)
@@ -89,11 +101,14 @@ class PseudodataGenerator:
             'terminals': np.zeros((self.episode_length, 1), dtype=bool),
             'true_tasks': np.array(
                 [[{'base_task': 0, 'specification': true_target}] for _ in range(self.episode_length)],
+                dtype=object),
+            'agent_infos': np.array(
+                [{'exploration_trajectory': True} for _ in range(self.episode_length)],
                 dtype=object)
         }
         return episode
 
-    def _generate_state(self, state, action, target, itr_to_target=75):
+    def _generate_state(self, state, action, target, itr_to_target=150):
         if target >= 0:
             next_state = min(state[0] + self.tasks[-1] / itr_to_target, target)
         else:
@@ -154,6 +169,8 @@ def init_networks(variant, obs_dim, action_dim):
         latent_dim,
         variant['algo_params']['batch_size_reconstruction'],
         num_classes,
+        variant['reconstruction_params']['state_preprocessing_dim'],
+        variant['reconstruction_params']['simplified_state_preprocessor'],
         time_steps,
         variant['algo_params']['encoder_merge_mode'],
         relevant_input_indices=variant['algo_params']['encoder_omit_input']
@@ -172,14 +189,17 @@ def init_networks(variant, obs_dim, action_dim):
         net_complex_enc_dec,
         variant['env_params']['state_reconstruction_clip'],
         variant['env_params']['use_state_decoder'],
+        encoder.state_preprocessor,
         variant['reconstruction_params']['use_next_state_for_reward_decoder'],
     )
 
+    combined_trajectories = variant['algo_params']['num_trajectories_per_task'] \
+                            + variant['algo_params']['num_exploration_trajectories_per_task']
     replay_buffer = StackedReplayBuffer(
         variant['algo_params']['max_replay_buffer_size'],
         time_steps,
         variant['algo_params']['decoder_time_window'],
-        variant['algo_params']['num_transitions_per_episode'],
+        combined_trajectories * variant['algo_params']['max_path_length'],
         obs_dim,
         action_dim,
         latent_dim,
@@ -246,19 +266,25 @@ def plot_encoder(
         next_o = episode['next_observations']
         # Normalize
         stats_dict = replay_buffer.get_stats()
-        o = ptu.from_numpy((o - stats_dict["observations"]["mean"]) / (stats_dict["observations"]["std"] + 1e-9))
-        a = ptu.from_numpy((a - stats_dict["actions"]["mean"]) / (stats_dict["actions"]["std"] + 1e-9))
-        r = ptu.from_numpy((r - stats_dict["rewards"]["mean"]) / (stats_dict["rewards"]["std"] + 1e-9))
-        next_o = ptu.from_numpy(
-            (next_o - stats_dict["next_observations"]["mean"]) / (stats_dict["next_observations"]["std"] + 1e-9))
+        #o = ptu.from_numpy((o - stats_dict["observations"]["mean"]) / (stats_dict["observations"]["std"] + 1e-9))
+        #a = ptu.from_numpy((a - stats_dict["actions"]["mean"]) / (stats_dict["actions"]["std"] + 1e-9))
+        #r = ptu.from_numpy((r - stats_dict["rewards"]["mean"]) / (stats_dict["rewards"]["std"] + 1e-9))
+        #next_o = ptu.from_numpy(
+        #    (next_o - stats_dict["next_observations"]["mean"]) / (stats_dict["next_observations"]["std"] + 1e-9))
+        o = ptu.from_numpy(o)
+        a = ptu.from_numpy(a)
+        r = ptu.from_numpy(r)
+        next_o = ptu.from_numpy(next_o)
         encoder_input[time_steps:] = torch.cat([o, a, r, next_o], dim=1)
         encoder_input = encoder_input.unsqueeze(0)
+        encoder_input = encoder_input.split(1, -1)
         padding_mask = np.zeros((1, time_steps + episode_length), dtype=bool)
         padding_mask[:, :(time_steps - 1)] = True
         z = torch.zeros((episode_length, 1))
 
         for i in range(episode_length):
-            z[i], _ = encoder.forward(encoder_input[:, i:(i + time_steps), :],
+            current_encoder_input = [j[:, i:(i + time_steps), :] for j in encoder_input]
+            z[i], _ = encoder.forward(current_encoder_input,
                                       padding_mask=padding_mask[:, i:(i + time_steps)])
         z_max = max(torch.max(z).item(), z_max) if z_max is not None else torch.max(z).item()
         z_min = min(torch.min(z).item(), z_min) if z_min is not None else torch.min(z).item()
@@ -267,7 +293,7 @@ def plot_encoder(
 
         plot_per_episode(episode, 'task_indicators', fig_ax=(fig, ax[0]))
         plot_per_episode(episode, 'rewards', fig_ax=(fig, ax[1]))
-        plot_per_episode(episode, 'observations', y_const='specification', fig_ax=(fig, ax[2]))
+        plot_per_episode(episode, 'observations', const='time_vs_specification', fig_ax=(fig, ax[2]))
 
     fig.tight_layout()
     fig.show()
@@ -285,23 +311,25 @@ def plot_decoder(
         save_dir=None,
         save_name=None,
 ):
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5.76, 4.32))
 
     # Prepare input data
-    min_state = replay_buffer.get_stats()['observations']['min'][0]
-    max_state = replay_buffer.get_stats()['observations']['max'][0]
+    min_state = -26#replay_buffer.get_stats()['observations']['min'][0]
+    max_state = 26#replay_buffer.get_stats()['observations']['max'][0]
     action_mean = replay_buffer.get_stats()['actions']['mean'][0]
 
     nr_points = 101
-    nr_z_values = 30
+    nr_z_values = 15
     states = torch.linspace(min_state, max_state, steps=nr_points, device=ptu.device)
     actions = action_mean * torch.ones(nr_points, device=ptu.device)
+    states_norm = states
+    actions_norm = actions
 
     stats_dict = replay_buffer.get_stats()
-    states_norm = ptu.from_numpy(
-        (ptu.get_numpy(states) - stats_dict["observations"]["mean"]) / (stats_dict["observations"]["std"] + 1e-9))
-    actions_norm = ptu.from_numpy(
-        (ptu.get_numpy(actions) - stats_dict["actions"]["mean"]) / (stats_dict["actions"]["std"] + 1e-9))
+    #states_norm = ptu.from_numpy(
+    #    (ptu.get_numpy(states) - stats_dict["observations"]["mean"]) / (stats_dict["observations"]["std"] + 1e-9))
+    #actions_norm = ptu.from_numpy(
+    #    (ptu.get_numpy(actions) - stats_dict["actions"]["mean"]) / (stats_dict["actions"]["std"] + 1e-9))
     padding_mask = torch.zeros(nr_points, device=ptu.device, dtype=torch.bool)
 
     # Init collection array
@@ -323,14 +351,15 @@ def plot_decoder(
         _, reward_pred_norm = decoder.forward(states_norm.unsqueeze(1), actions_norm.unsqueeze(1),
                                               states_norm.unsqueeze(1), zs.unsqueeze(1),
                                               padding_mask=padding_mask.unsqueeze(1))
-        reward_pred = ptu.get_numpy(reward_pred_norm) * (stats_dict["rewards"]["std"] + 1e-9) + \
-                      stats_dict["rewards"]["mean"]
+        reward_pred = ptu.get_numpy(reward_pred_norm)# * (stats_dict["rewards"]["std"] + 1e-9) + \
+                      #stats_dict["rewards"]["mean"]
         ax.plot(ptu.get_numpy(states), reward_pred, color=colors[i])
         reward_preds[i] = reward_pred.squeeze()
 
     ax.set_xlabel('position')
     ax.set_ylabel('reward prediction')
     ax.set_title('Family of decoder functions \n(colored by latent values z)')
+    #ax.set_ylim((-60, 5))
     fig.tight_layout()
     fig.show()
     if (save_dir is not None) and (save_name is not None):
@@ -350,7 +379,8 @@ def plot_decoder(
         fig_con.savefig(os.path.join(save_dir, 'contour-' + save_name), bbox_inches='tight')
 
 
-DEFAULT = "../configs/pseudodata/cheetah-stationary-target-qR.json"
+DEFAULT = "../configs/thesis/pseudodata.json"
+LINKED = "../configs/thesis/pseudodata-linked.json"
 MLP_FULLEP = "../configs/pseudodata/cheetah-stationary-target-qR-TimestepMLP-fullEp.json"
 MEANMLP_KL = "../configs/pseudodata/cheetah-stationary-target-qR-MeanTimestepMLP-queryKL.json"
 
@@ -393,15 +423,24 @@ def main(config):
     # Generate pseudodata and put it into stacked replay buffer
     print('Generating data')
     for i in range(pseudo_generator.num_tasks):
-        episode = pseudo_generator.generate_episode(i)
-        replay_buffer.add_episode(episode)
+        episode = pseudo_generator.generate_episode(i, mode='overshoot_plus')
+        episode_2 = pseudo_generator.generate_episode(i, mode='overshoot_minus')
+        if variant['algo_params']['num_exploration_trajectories_per_task'] == 2:
+            episode_list = ([episode, episode_2], 400)
+            replay_buffer.add_episode_group(episode_list)
+        else:
+            episode_list = ([episode], 200)
+            replay_buffer.add_episode_group(episode_list)
+            episode_list = ([episode_2], 200)
+            replay_buffer.add_episode_group(episode_list)
+
 
     replay_buffer.stats_dict = replay_buffer.get_stats()
 
     # call reconstructionTrainer on this stacked_replay_buffer, train until completion
     print('Reconstruction training')
     reconstruction_trainer.train(variant['algo_params']['num_reconstruction_steps'],
-                                 plot_save_file=os.path.join(experiment_log_dir, 'reconstruction-training-curve.png'))
+                                 plot_save_file=os.path.join(experiment_log_dir, 'reconstruction-training-curve.pdf'))
     logger.dump_tabular(with_prefix=False, with_timestamp=False)
 
     # visualize results with existing functions (e.g. on "episode rollout")
@@ -409,12 +448,12 @@ def main(config):
     z_min, z_max = plot_encoder(encoder, pseudo_generator, replay_buffer, variant['algo_params']['time_steps'],
                                 variant['algo_params']['max_path_length'],
                                 [-25, -15, -5, 0, 5, 15, 25],  # [-25, -12.5, 0, 12.5, 25],
-                                save_dir=experiment_log_dir, save_name='latent-encodings.png')
+                                save_dir=experiment_log_dir, save_name='latent-encodings.pdf')
     z_min_2, z_max_2 = plot_encoder(encoder, pseudo_generator, replay_buffer, variant['algo_params']['time_steps'],
                                     variant['algo_params']['max_path_length'],
                                     [-25, -15, -5, 0, 5, 15, 25],  # [-25, -12.5, 0, 12.5, 25],
                                     modify_target=True,
-                                    save_dir=experiment_log_dir, save_name='latent-encodings-wrong-trajectory.png')
+                                    save_dir=experiment_log_dir, save_name='latent-encodings-wrong-trajectory.pdf')
 
     z_min_2 = min(z_min, z_min_2)
     z_max_2 = max(z_max, z_max_2)
@@ -422,9 +461,9 @@ def main(config):
     # visualize decoder capability showing the function learned for a particular z
     print('Plotting decoder')
     plot_decoder(replay_buffer, decoder, z_min, z_max,
-                 save_dir=experiment_log_dir, save_name='decoder-functions.png')
+                 save_dir=experiment_log_dir, save_name='decoder-functions.pdf')
     plot_decoder(replay_buffer, decoder, z_min_2, z_max_2,
-                 save_dir=experiment_log_dir, save_name='decoder-functions-all.png')
+                 save_dir=experiment_log_dir, save_name='decoder-functions-all.pdf')
 
 
 if __name__ == '__main__':
