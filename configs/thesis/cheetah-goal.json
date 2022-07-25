@@ -24,7 +24,7 @@
         "exploration_epoch_steps": 0,
         "exploration_ensemble_agents": 3,
         "sac_uses_exploration_data": true,
-        "exploration_by_probability": true,
+        "exploration_by_probability": false,
         "seed": 0,
         "time_steps": 30,
         "decoder_time_window": [-Infinity, Infinity],

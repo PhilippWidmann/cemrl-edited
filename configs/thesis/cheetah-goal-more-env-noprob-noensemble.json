@@ -17,11 +17,12 @@
     },
     "algo_params": {
         "use_data_normalization": false,
-        "exploration_agent": "urlb_smm_autodim",
+        "exploration_agent": "ensemble_urlb_smm_autodim",
         "exploration_pretraining_steps": 0,
         "exploration_pretraining_epochs": 20,
         "exploration_pretraining_epoch_steps": 5000,
         "exploration_epoch_steps": 0,
+        "exploration_ensemble_agents": 1,
         "sac_uses_exploration_data": true,
         "exploration_by_probability": false,
         "seed": 0,

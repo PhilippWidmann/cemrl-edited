@@ -1,6 +1,6 @@
 {
     "env_name": "cheetah-stationary-targetTwosided",
-    "path_to_weights": "output/cheetah-goal/2022_07_09_10_24_13",
+    "path_to_weights": "output/cheetah-goal/2022_07_10_07_50_51",
     "showcase_itr": 0,
     "env_params": {
         "n_train_tasks": 100,

@@ -42,7 +42,7 @@ def setup_environment(variant):
         np.random.seed(variant['algo_params']['seed'])
 
     # create logging directory
-    encoding_save_epochs = [0, 5, 10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450,
+    encoding_save_epochs = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450,
                             475, 500, 600, 750, 1000, 1250, 1500, 1750, 2000, 3000, 5000, 10000, 15000, 20000]
     experiment_log_dir = setup_logger(variant['config_name'], variant=variant, exp_id=None,
                                       base_log_dir=variant['util_params']['base_log_dir'], snapshot_mode='specific',
