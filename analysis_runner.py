@@ -141,10 +141,11 @@ def analysis(variant):
 
             fig.tight_layout()
             all_figures.append((fig, axes))
+            casename = str(cases[-1]) if type == 'exploration' else str(cases)
             if save:
                 save_name = variant['save_prefix'] + type + 'task_' + \
                             'itr-' + str(showcase_itr) + '_' + \
-                            'case-' + str(cases) + '_' + \
+                            'case-' + casename + '_' + \
                             str(plot_spec) + '.png'
                 fig.savefig(os.path.join(save_dir, save_name), dpi=300, bbox_inches='tight')
             if show:

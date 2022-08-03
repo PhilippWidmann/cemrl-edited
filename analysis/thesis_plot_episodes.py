@@ -1,10 +1,22 @@
 import copy
 import os
 import warnings
-
 import click
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 from analysis_runner import analysis, prepare_variant_file
-from thesis_plot_progress import DEFAULTS
+from thesis_plot_progress import DEFAULTS, SMALL_SIZE, MEDIUM_SIZE, BIGGER_SIZE, COLOR_CYCLER
+
+#plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=SMALL_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+#plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+mpl.rcParams['axes.prop_cycle'] = COLOR_CYCLER['default']
 
 DEFAULT_CONFIG = dict(
     showcase_itr=500,
@@ -41,7 +53,7 @@ DEFAULT_CONFIG = dict(
 
 CONFIGS = {
     "cheetah-goal-exploration-run-1": dict(
-        path_to_weights='../output/cheetah-goal/2022_07_09_10_24_13 (Kopie)',
+        path_to_weights='../output/cheetah-goal/2022_07_09_10_24_13',
         save_names='cheetah-goal/exploration-run-1',
         multiple_episode_plots=[['time_vs_pos']],
         num_exploration_cases=10,
@@ -49,7 +61,7 @@ CONFIGS = {
         figsize=(3.84, 2.88),
     ),
     "cheetah-goal-exploration-run-2": dict(
-        path_to_weights='../output/cheetah-goal/2022_07_08_10_44_48 (Kopie)',
+        path_to_weights='../output/cheetah-goal/2022_07_08_10_44_48',
         save_names='cheetah-goal/exploration-run-2',
         multiple_episode_plots=[['time_vs_pos']],
         num_exploration_cases=10,
@@ -57,7 +69,7 @@ CONFIGS = {
         figsize=(3.84, 2.88),
     ),
     "cheetah-goal-exploration-run-3": dict(
-        path_to_weights='../output/cheetah-goal/2022_07_10_07_50_51 (Kopie)',
+        path_to_weights='../output/cheetah-goal/2022_07_10_07_50_51',
         save_names='cheetah-goal/exploration-run-3',
         multiple_episode_plots=[['time_vs_pos']],
         num_exploration_cases=10,
@@ -65,7 +77,7 @@ CONFIGS = {
         figsize=(3.84, 2.88),
     ),
     "cheetah-goal-ablation-default": dict(
-        path_to_weights='../output/cheetah-goal/2022_07_09_10_24_13 (Kopie)',
+        path_to_weights='../output/cheetah-goal/2022_07_09_10_24_13',
         save_names=['cheetah-goal-ablation/default-encodings', 'cheetah-goal-ablation/default-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
@@ -89,7 +101,7 @@ CONFIGS = {
         figsize=(3.84, 2.88),
     ),
     "cheetah-goal-halfline-step": dict(
-        path_to_weights='../output/cheetah-halfline-goal-step-2/2022_07_14_13_37_23',
+        path_to_weights='../output/cheetah-halfline-goal-step/2022_07_14_13_37_23',
         save_names=['cheetah-goal-halfline/step-encodings', 'cheetah-goal-halfline/step-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
@@ -98,7 +110,7 @@ CONFIGS = {
         showcase_itr=300,
     ),
     "cheetah-goal-halfline-past": dict(
-        path_to_weights='../output/cheetah-halfline-goal-past-2/2022_07_14_01_53_26',
+        path_to_weights='../output/cheetah-halfline-goal-past/2022_07_14_01_53_26',
         save_names=['cheetah-goal-halfline/past-encodings', 'cheetah-goal-halfline/past-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
@@ -107,7 +119,7 @@ CONFIGS = {
         showcase_itr=300,
     ),
     "cheetah-goal-halfline-past-future": dict(
-        path_to_weights='../output/cheetah-halfline-goal-past-and-future-2/2022_07_14_09_20_26',
+        path_to_weights='../output/cheetah-halfline-goal-past-and-future/2022_07_14_09_20_26',
         save_names=['cheetah-goal-halfline/past-future-encodings', 'cheetah-goal-halfline/past-future-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
@@ -116,7 +128,7 @@ CONFIGS = {
         showcase_itr=250,
     ),
     "cheetah-goal-halfline-full-episode": dict(
-        path_to_weights='../output/cheetah-halfline-goal-fullEp-2/2022_07_14_11_28_22',
+        path_to_weights='../output/cheetah-halfline-goal-fullEp/2022_07_14_11_28_22',
         save_names=['cheetah-goal-halfline/full-episode-encodings', 'cheetah-goal-halfline/full-episode-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
@@ -138,7 +150,7 @@ CONFIGS = {
         ylim=[-50, 50]
     ),
     "toy-goal-2D-policy": dict(
-        path_to_weights='../output/toy-goal-2D/2022_07_12_17_30_36 (Kopie)',
+        path_to_weights='../output/toy-goal-2D/2022_07_12_17_30_36',
         save_names=['toy-goal-plane/policy-trajectories',],
         multiple_episode_plots=[['pos[0]_vs_pos[1]_scatter_specification[0]_vs_specification[1]'],],
         x_label=['position $x_1$', '$z_1$'],
@@ -151,7 +163,7 @@ CONFIGS = {
         ylim=(-19, 19),
     ),
     "toy-goal-2D-policy-encoding": dict(
-        path_to_weights='../output/toy-goal-2D/2022_07_12_17_30_36 (Kopie)',
+        path_to_weights='../output/toy-goal-2D/2022_07_12_17_30_36',
         save_names=['toy-goal-plane/policy-trajectories-encodings',],
         multiple_episode_plots=[['task_indicators[0]_vs_task_indicators[1]'],],
         x_label=['position $x_1$', '$z_1$'],
@@ -162,7 +174,7 @@ CONFIGS = {
         showcase_itr=450,
     ),
     "toy-goal-2D-policy-train": dict(
-        path_to_weights='../output/toy-goal-2D/2022_07_12_17_30_36 (Kopie)',
+        path_to_weights='../output/toy-goal-2D/2022_07_12_17_30_36',
         save_names=['toy-goal-plane/train-policy-trajectories',
                     'toy-goal-plane/train-policy-trajectories-encodings',],
         multiple_episode_plots=[['pos[0]_vs_pos[1]_scatter_specification[0]_vs_specification[1]'],
@@ -195,7 +207,7 @@ def copy_analysis_param(param, variant, config):
 @click.command()
 @click.option('--save_dir', default="../../../Thesis/experiments/")
 def main(save_dir):
-    config_names = ("cheetah-goal-halfline-past-future",)
+    config_names = ("cheetah-goal-ablation-default", )
     if config_names is None:
         config_names = CONFIGS.keys()
     for config_name in config_names:

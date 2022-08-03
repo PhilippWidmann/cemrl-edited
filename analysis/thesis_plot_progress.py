@@ -6,6 +6,22 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 
+SMALL_SIZE = 16
+MEDIUM_SIZE = 20
+BIGGER_SIZE = 24
+# Default sizes:
+# Legend, axis labels and ticks: 10
+# Axis title (i.e. text above figure): 12
+
+#plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=SMALL_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+#plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+
 DEFAULTS = {
     'figsize': (5.76, 4.32),  # (5.76, 4.32)=0.9* (6.4, 4.8); (3.84, 2.88)=0.6*(6.4, 4.8)
     'save_dir': '../test',
@@ -18,11 +34,13 @@ DEFAULTS = {
     'color_cycler': 'default',
     'line_cycler': 'default',
 }
-
+# Original colorblind palette: "#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
 COLOR_CYCLER = {
-    'default': cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']),
+    #'default': cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']),
+    'default': cycler('color', ["#0072B2", "#D55E00", "#009E73", "#F0E442", "#E69F00", "#56B4E9", "#CC79A7", "#000000", "#E69F00", "#56B4E9"]),
     'blue': cycler('color', ['#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4']),
-    'variant': cycler('color', ['#1f77b4', '#d62728', '#e377c2', '#8c564b', '#9467bd', '#7f7f7f', '#bcbd22', '#17becf', '#ff7f0e', '#2ca02c']),
+    #'variant': cycler('color', ['#1f77b4', '#d62728', '#e377c2', '#8c564b', '#9467bd', '#7f7f7f', '#bcbd22', '#17becf', '#ff7f0e', '#2ca02c']),
+    'variant': cycler('color', ["#0072B2", "#E69F00", "#CC79A7", "#56B4E9", "#D55E00", "#009E73", "#F0E442", "#000000", "#E69F00", "#56B4E9"]),
 }
 
 LINE_CYCLER = {
@@ -41,9 +59,9 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13 (Kopie)",
-                         "../output/cheetah-goal/2022_07_08_10_44_48 (Kopie)",  # This is the bad run
-                         "../output/cheetah-goal/2022_07_10_07_50_51 (Kopie)"),
+                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",
+                         "../output/cheetah-goal/2022_07_08_10_44_48",  # This is the bad run
+                         "../output/cheetah-goal/2022_07_10_07_50_51"),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
@@ -64,15 +82,15 @@ CONFIGS = {
     },
     'cheetah-goal/cheetah-goal-success': {
         'x_label': 'Training transition $n$',
-        'y_label': 'Average success rate$',
+        'y_label': 'Average success rate',
         'title': 'cheetah-goal',
         'xlim': [100000, 7000000],
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13 (Kopie)",
-                         "../output/cheetah-goal/2022_07_08_10_44_48 (Kopie)",  # This is the bad run
-                         "../output/cheetah-goal/2022_07_10_07_50_51 (Kopie)"),
+                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",
+                         "../output/cheetah-goal/2022_07_08_10_44_48",  # This is the bad run
+                         "../output/cheetah-goal/2022_07_10_07_50_51"),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
@@ -90,21 +108,21 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Ours, run 1',
-                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13 (Kopie)",),
+                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'Ours, run 2',
-                'dirs': ("../output/cheetah-goal/2022_07_08_10_44_48 (Kopie)",),  # This is the bad run
+                'dirs': ("../output/cheetah-goal/2022_07_08_10_44_48",),  # This is the bad run
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'Ours, run 3',
-                'dirs': ("../output/cheetah-goal/2022_07_10_07_50_51 (Kopie)",),
+                'dirs': ("../output/cheetah-goal/2022_07_10_07_50_51",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
@@ -141,7 +159,7 @@ CONFIGS = {
     },
     'toy-goal-line-success': {
         'x_label': 'Training transition $n$',
-        'y_label': 'Average success rate$',
+        'y_label': 'Average success rate',
         'title': 'toy-goal-line',
         'groups': (
             {
@@ -178,7 +196,7 @@ CONFIGS = {
     },
     'mw-goal-line-success': {
         'x_label': 'Training transition $n$',
-        'y_label': 'Average success rate$',
+        'y_label': 'Average success rate',
         'title': 'metaworld-goal-line',
         'xlim': [60000, None],
         'groups': (
@@ -199,28 +217,28 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Ours (full episode)',
-                'dirs': ("../output/cheetah-halfline-goal-fullEp-2/2022_07_14_11_28_22",),
+                'dirs': ("../output/cheetah-halfline-goal-fullEp/2022_07_14_11_28_22",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'Ours (past & future T)',
-                'dirs': ("../output/cheetah-halfline-goal-past-and-future-2/2022_07_14_09_20_26",),
+                'dirs': ("../output/cheetah-halfline-goal-past-and-future/2022_07_14_09_20_26",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'Ours (past T)',
-                'dirs': ("../output/cheetah-halfline-goal-past-2/2022_07_14_01_53_26",),  # This is the bad run
+                'dirs': ("../output/cheetah-halfline-goal-past/2022_07_14_01_53_26",),  # This is the bad run
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'Ours (time step)',
-                'dirs': ("../output/cheetah-halfline-goal-step-2/2022_07_14_13_37_23",),
+                'dirs': ("../output/cheetah-halfline-goal-step/2022_07_14_13_37_23",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
@@ -236,7 +254,7 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13 (Kopie)",),
+                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
@@ -265,7 +283,7 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13 (Kopie)",),
+                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
@@ -295,7 +313,7 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36 (Kopie)",),
+                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
@@ -316,21 +334,21 @@ CONFIGS = {
     },
     'toy-goal-plane/train-vs-test': {
         'x_label': 'Training transition $n$',
-        'y_label': 'Average success rate$',
+        'y_label': 'Average success rate',
         'title': 'toy-goal-2D',
         'color_cycler': 'blue',
         'line_cycler': 'diff_lines',
         'groups': (
             {
                 'name': 'Meta-testing set',
-                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36 (Kopie)",),
+                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
             },
             {
                 'name': 'Meta-training set',
-                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36 (Kopie)",),
+                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",),
                 'x': 'n_env_steps_total',
                 'y': 'train_eval_success_rate',
                 'x_correction': True
@@ -397,7 +415,7 @@ def plot_progress_curve(group, fig, ax):
 @click.command()
 @click.option('--save_dir', default="../../../Thesis/experiments/")
 def main(save_dir):
-    config_names = ('mw-goal-line-success',)
+    config_names = None#('mw-goal-line',)
     if config_names is None:
         config_names = CONFIGS.keys()
     for config_name in config_names:
