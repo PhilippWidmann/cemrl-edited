@@ -20,7 +20,7 @@ import configs.analysis_config
 
 from philipp_runner import setup_environment, initialize_networks, load_networks
 
-plt.rcParams.update({'font.size': 20})
+#plt.rcParams.update({'font.size': 20})
 
 
 def analysis(variant):

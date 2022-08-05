@@ -6,7 +6,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from analysis_runner import analysis, prepare_variant_file
-from thesis_plot_progress import DEFAULTS, SMALL_SIZE, MEDIUM_SIZE, BIGGER_SIZE, COLOR_CYCLER
+from thesis_plot_progress import DEFAULTS, SMALL_SIZE, MEDIUM_SIZE, BIGGER_SIZE, COLOR_CYCLER, \
+    FIGSIZE_FULL, FIGSIZE_HALF, FIGSIZE_THIRD, FIGSIZE_HALF_SQUARE
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
 
 #plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
@@ -58,15 +62,15 @@ CONFIGS = {
         multiple_episode_plots=[['time_vs_pos']],
         num_exploration_cases=10,
         ylim=(-40, 40),
-        figsize=(3.84, 2.88),
+        figsize=FIGSIZE_THIRD,
     ),
     "cheetah-goal-exploration-run-2": dict(
-        path_to_weights='../output/cheetah-goal/2022_07_08_10_44_48',
+        path_to_weights="../output/cheetah-goal/2022_07_30_20_41_18",
         save_names='cheetah-goal/exploration-run-2',
         multiple_episode_plots=[['time_vs_pos']],
         num_exploration_cases=10,
         ylim=(-40, 40),
-        figsize=(3.84, 2.88),
+        figsize=FIGSIZE_THIRD,
     ),
     "cheetah-goal-exploration-run-3": dict(
         path_to_weights='../output/cheetah-goal/2022_07_10_07_50_51',
@@ -74,7 +78,15 @@ CONFIGS = {
         multiple_episode_plots=[['time_vs_pos']],
         num_exploration_cases=10,
         ylim=(-40, 40),
-        figsize=(3.84, 2.88),
+        figsize=FIGSIZE_THIRD,
+    ),
+    "cheetah-goal-exploration-run-bad": dict(
+        path_to_weights='../output/cheetah-goal/2022_07_08_10_44_48',
+        save_names='cheetah-goal/exploration-run-bad',
+        multiple_episode_plots=[['time_vs_pos']],
+        num_exploration_cases=10,
+        ylim=(-40, 40),
+        figsize=FIGSIZE_THIRD,
     ),
     "cheetah-goal-ablation-default": dict(
         path_to_weights='../output/cheetah-goal/2022_07_09_10_24_13',
@@ -82,7 +94,7 @@ CONFIGS = {
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
         example_cases=[0, 4, 8, 12, 16, 20, 24],
-        figsize=(3.84, 2.88),
+        figsize=FIGSIZE_THIRD,
     ),
     "cheetah-goal-ablation-noLink": dict(
         path_to_weights='../output/cheetah-goal-separateEpisodes/2022_07_10_10_00_00',
@@ -90,7 +102,7 @@ CONFIGS = {
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
         example_cases=[0, 4, 8, 12, 16, 20, 24],
-        figsize=(3.84, 2.88),
+        figsize=FIGSIZE_THIRD,
     ),
     "cheetah-goal-ablation-noExploration": dict(
         path_to_weights='../output/cheetah-goal-noExploration/2022_07_11_22_17_47',
@@ -98,42 +110,54 @@ CONFIGS = {
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
         example_cases=[0, 4, 8, 12, 16, 20, 24],
-        figsize=(3.84, 2.88),
+        figsize=FIGSIZE_THIRD,
     ),
     "cheetah-goal-halfline-step": dict(
-        path_to_weights='../output/cheetah-halfline-goal-step/2022_07_14_13_37_23',
+        path_to_weights="../output/cheetah-halfline-goal-step/2022_07_22_14_18_48",
+                        # "../output/cheetah-halfline-goal-step/2022_07_14_13_37_23",  # worst
+                        # "../output/cheetah-halfline-goal-step/2022_07_22_14_18_48",  # best
+                        # "../output/cheetah-halfline-goal-step/2022_07_23_03_38_01",  # mid
         save_names=['cheetah-goal-halfline/step-encodings', 'cheetah-goal-halfline/step-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
         example_cases=[0, 5, 10, 15, 20],
-        #figsize=(3.84, 2.88),
+        #figsize=FIGSIZE_THIRD,
         showcase_itr=300,
     ),
     "cheetah-goal-halfline-past": dict(
-        path_to_weights='../output/cheetah-halfline-goal-past/2022_07_14_01_53_26',
+        path_to_weights="../output/cheetah-halfline-goal-past/2022_07_14_01_53_26",
+                        # "../output/cheetah-halfline-goal-past/2022_07_14_01_53_26",  # best
+                        # "../output/cheetah-halfline-goal-past/2022_07_23_20_10_38",  # worst
+                        # "../output/cheetah-halfline-goal-past/2022_07_24_10_40_36",  # mid
         save_names=['cheetah-goal-halfline/past-encodings', 'cheetah-goal-halfline/past-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
         example_cases=[0, 5, 10, 15, 20],
-        #figsize=(3.84, 2.88),
+        #figsize=FIGSIZE_THIRD,
         showcase_itr=300,
     ),
     "cheetah-goal-halfline-past-future": dict(
-        path_to_weights='../output/cheetah-halfline-goal-past-and-future/2022_07_14_09_20_26',
+        path_to_weights="../output/cheetah-halfline-goal-past-and-future/2022_07_22_14_19_26",
+                        # "../output/cheetah-halfline-goal-past-and-future/2022_07_14_09_20_26",  # mid
+                        # "../output/cheetah-halfline-goal-past-and-future/2022_07_22_14_19_26",  # best
+                        # "../output/cheetah-halfline-goal-past-and-future/2022_07_23_05_09_26",  # worst
         save_names=['cheetah-goal-halfline/past-future-encodings', 'cheetah-goal-halfline/past-future-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
         example_cases=[0, 5, 10, 15, 20],
-        #figsize=(3.84, 2.88),
+        #figsize=FIGSIZE_THIRD,
         showcase_itr=250,
     ),
     "cheetah-goal-halfline-full-episode": dict(
-        path_to_weights='../output/cheetah-halfline-goal-fullEp/2022_07_14_11_28_22',
+        path_to_weights="../output/cheetah-halfline-goal-fullEp/2022_07_23_16_56_12",
+                        # "../output/cheetah-halfline-goal-fullEp/2022_07_14_11_28_22",  # mid
+                        # "../output/cheetah-halfline-goal-fullEp/2022_07_23_16_56_12",  # best
+                        # "../output/cheetah-halfline-goal-fullEp/2022_07_24_10_26_45",  # worst
         save_names=['cheetah-goal-halfline/full-episode-encodings', 'cheetah-goal-halfline/full-episode-pos'],
         multiple_episode_plots=[['time_vs_z_means_fill_time_vs_z_stds'], ['time_vs_pos_const_time_vs_specification']],
         y_label=['$z$', 'Position'],
         example_cases=[0, 5, 10, 15, 20],
-        #figsize=(3.84, 2.88),
+        #figsize=FIGSIZE_THIRD,
         showcase_itr=300,
     ),
     "toy-goal-2D-exploration": dict(
@@ -144,7 +168,7 @@ CONFIGS = {
         y_label=['position $x_2$'],
         num_exploration_cases=50,
         #example_cases=[0, 5, 10, 15, 20],
-        figsize=(5.76, 5.2),
+        figsize=FIGSIZE_HALF_SQUARE,
         showcase_itr=450,
         xlim=[-50, 50],
         ylim=[-50, 50]
@@ -157,7 +181,7 @@ CONFIGS = {
         y_label=['position $x_2$', '$z_2$'],
         #num_exploration_cases=50,
         example_cases=[0, 5, 10, 15, 20, 25, 30, 35],
-        figsize=(5.76, 5.2),
+        figsize=FIGSIZE_HALF_SQUARE,
         showcase_itr=450,
         xlim=(-19, 19),
         ylim=(-19, 19),
@@ -170,7 +194,7 @@ CONFIGS = {
         y_label=['position $x_2$', '$z_2$'],
         #num_exploration_cases=50,
         example_cases=[0, 5, 10, 15, 20, 25, 30, 35],
-        figsize=(5.76, 5.2),
+        figsize=FIGSIZE_HALF_SQUARE,
         showcase_itr=450,
     ),
     "toy-goal-2D-policy-train": dict(
@@ -183,7 +207,7 @@ CONFIGS = {
         y_label=['position $x_2$', '$z_2$'],
         #num_exploration_cases=50,
         train_example_cases=[0, 5, 10, 15, 20, 25, 30, 35],
-        figsize=(5.76, 5.2),
+        figsize=FIGSIZE_HALF_SQUARE,
         showcase_itr=450,
     )
 }
@@ -207,7 +231,7 @@ def copy_analysis_param(param, variant, config):
 @click.command()
 @click.option('--save_dir', default="../../../Thesis/experiments/")
 def main(save_dir):
-    config_names = ("cheetah-goal-ablation-default", )
+    config_names = ("cheetah-goal-exploration-run-2", "cheetah-goal-exploration-run-bad",)
     if config_names is None:
         config_names = CONFIGS.keys()
     for config_name in config_names:
