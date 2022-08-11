@@ -58,7 +58,7 @@ def get_plot_specification(specifications):
     return plots
 
 
-def plot_per_episode(results, y, scatter=None, const=None, fill=None, x='time', fig_ax=None):
+def plot_per_episode(results, y, scatter=None, const=None, fill=None, x='time', fig_ax=None, **kwargs):
     if fig_ax is not None:
         fig, ax = fig_ax
     else:
@@ -67,7 +67,7 @@ def plot_per_episode(results, y, scatter=None, const=None, fill=None, x='time', 
     data_x = get_quantity(results, x)
     data_y = get_quantity(results, y)
 
-    p = ax.plot(data_x, data_y)
+    p = ax.plot(data_x, data_y, **kwargs)
     if fill is not None:
         x_fill, y_fill = fill.split('_vs_')
         # Skip the 0-th timestep, since the "informationless" encoding can have very large variance

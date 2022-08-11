@@ -19,7 +19,15 @@ from rlkit.launchers.launcher_util import setup_logger
 from rlkit.core import logger
 import rlkit.torch.pytorch_util as ptu
 from philipp_runner import deep_update_dict
+from thesis_plot_progress import SMALL_SIZE, MEDIUM_SIZE, FIGSIZE_HALF
 
+
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=SMALL_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE-3)    # legend fontsize; corrected because it visually appears larger
+plt.rc('legend', title_fontsize=SMALL_SIZE)    # legend fontsize
 
 class PseudodataGenerator:
     def __init__(
@@ -254,46 +262,60 @@ def plot_encoder(
         save_dir=None,
         save_name=None
 ):
-    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(10, 15))
+    fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(FIGSIZE_HALF[0], 2*FIGSIZE_HALF[1]))
     z_min, z_max = None, None
-    for target in targets:
-        episode = pseudodata_generator.generate_episode(0, target, modify_target=modify_target, error_prob=1.0)
-        encoder_input = torch.zeros((episode_length + time_steps, 4), device=ptu.device, dtype=torch.float)
-        # Get input
-        o = episode['observations']
-        a = episode['actions']
-        r = episode['rewards']
-        next_o = episode['next_observations']
-        # Normalize
-        stats_dict = replay_buffer.get_stats()
-        #o = ptu.from_numpy((o - stats_dict["observations"]["mean"]) / (stats_dict["observations"]["std"] + 1e-9))
-        #a = ptu.from_numpy((a - stats_dict["actions"]["mean"]) / (stats_dict["actions"]["std"] + 1e-9))
-        #r = ptu.from_numpy((r - stats_dict["rewards"]["mean"]) / (stats_dict["rewards"]["std"] + 1e-9))
-        #next_o = ptu.from_numpy(
-        #    (next_o - stats_dict["next_observations"]["mean"]) / (stats_dict["next_observations"]["std"] + 1e-9))
-        o = ptu.from_numpy(o)
-        a = ptu.from_numpy(a)
-        r = ptu.from_numpy(r)
-        next_o = ptu.from_numpy(next_o)
-        encoder_input[time_steps:] = torch.cat([o, a, r, next_o], dim=1)
-        encoder_input = encoder_input.unsqueeze(0)
-        encoder_input = encoder_input.split(1, -1)
-        padding_mask = np.zeros((1, time_steps + episode_length), dtype=bool)
-        padding_mask[:, :(time_steps - 1)] = True
-        z = torch.zeros((episode_length, 1))
+    for mode in ['overshoot_plus', 'overshoot_minus']:
+        ax[0].set_prop_cycle(None)
+        ax[1].set_prop_cycle(None)
+        for target in targets:
+            episode = pseudodata_generator.generate_episode(0, target, modify_target=modify_target, mode=mode, error_prob=1.0)
+            encoder_input = torch.zeros((episode_length + time_steps, 4), device=ptu.device, dtype=torch.float)
+            # Get input
+            o = episode['observations']
+            a = episode['actions']
+            r = episode['rewards']
+            next_o = episode['next_observations']
+            # Normalize
+            # stats_dict = replay_buffer.get_stats()
+            #o = ptu.from_numpy((o - stats_dict["observations"]["mean"]) / (stats_dict["observations"]["std"] + 1e-9))
+            #a = ptu.from_numpy((a - stats_dict["actions"]["mean"]) / (stats_dict["actions"]["std"] + 1e-9))
+            #r = ptu.from_numpy((r - stats_dict["rewards"]["mean"]) / (stats_dict["rewards"]["std"] + 1e-9))
+            #next_o = ptu.from_numpy(
+            #    (next_o - stats_dict["next_observations"]["mean"]) / (stats_dict["next_observations"]["std"] + 1e-9))
+            o = ptu.from_numpy(o)
+            a = ptu.from_numpy(a)
+            r = ptu.from_numpy(r)
+            next_o = ptu.from_numpy(next_o)
+            encoder_input[time_steps:] = torch.cat([o, a, r, next_o], dim=1)
+            encoder_input = encoder_input.unsqueeze(0)
+            encoder_input = encoder_input.split(1, -1)
+            padding_mask = np.zeros((1, time_steps + episode_length), dtype=bool)
+            padding_mask[:, :(time_steps - 1)] = True
+            z = torch.zeros((episode_length, 1))
 
-        for i in range(episode_length):
-            current_encoder_input = [j[:, i:(i + time_steps), :] for j in encoder_input]
-            z[i], _ = encoder.forward(current_encoder_input,
-                                      padding_mask=padding_mask[:, i:(i + time_steps)])
-        z_max = max(torch.max(z).item(), z_max) if z_max is not None else torch.max(z).item()
-        z_min = min(torch.min(z).item(), z_min) if z_min is not None else torch.min(z).item()
+            for i in range(episode_length):
+                current_encoder_input = [j[:, i:(i + time_steps), :] for j in encoder_input]
+                z[i], _ = encoder.forward(current_encoder_input,
+                                          padding_mask=padding_mask[:, i:(i + time_steps)])
+            z_max = max(torch.max(z).item(), z_max) if z_max is not None else torch.max(z).item()
+            z_min = min(torch.min(z).item(), z_min) if z_min is not None else torch.min(z).item()
 
-        episode['task_indicators'] = ptu.get_numpy(z)
+            episode['task_indicators'] = ptu.get_numpy(z)
 
-        plot_per_episode(episode, 'task_indicators', fig_ax=(fig, ax[0]))
-        plot_per_episode(episode, 'rewards', fig_ax=(fig, ax[1]))
-        plot_per_episode(episode, 'observations', const='time_vs_specification', fig_ax=(fig, ax[2]))
+            marker = "o" if mode == "overshoot_plus" else "^"
+            markevery = 40 if mode == "overshoot_plus" else (20, 40)
+            plot_per_episode(episode, 'task_indicators', fig_ax=(fig, ax[0]),
+                             marker=marker, markevery=markevery, markersize=8)
+            plot_per_episode(episode, 'observations', const='time_vs_specification', fig_ax=(fig, ax[1]),
+                             marker=marker, markevery=markevery, markersize=8)
+
+    # Edit plot labels
+    ax[0].set_title(None)
+    ax[0].set_xlabel("Time step $t$")
+    ax[0].set_ylabel("$z$")
+    ax[1].set_title(None)
+    ax[1].set_xlabel("Time step $t$")
+    ax[1].set_ylabel("Position")
 
     fig.tight_layout()
     fig.show()
@@ -311,12 +333,12 @@ def plot_decoder(
         save_dir=None,
         save_name=None,
 ):
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5.76, 4.32))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=FIGSIZE_HALF)
 
     # Prepare input data
     min_state = -26#replay_buffer.get_stats()['observations']['min'][0]
     max_state = 26#replay_buffer.get_stats()['observations']['max'][0]
-    action_mean = replay_buffer.get_stats()['actions']['mean'][0]
+    action_mean = 0#replay_buffer.get_stats()['actions']['mean'][0]
 
     nr_points = 101
     nr_z_values = 15
@@ -325,7 +347,7 @@ def plot_decoder(
     states_norm = states
     actions_norm = actions
 
-    stats_dict = replay_buffer.get_stats()
+    #stats_dict = replay_buffer.get_stats()
     #states_norm = ptu.from_numpy(
     #    (ptu.get_numpy(states) - stats_dict["observations"]["mean"]) / (stats_dict["observations"]["std"] + 1e-9))
     #actions_norm = ptu.from_numpy(
@@ -343,7 +365,8 @@ def plot_decoder(
     if z_max is not None:
         colors = plt.cm.viridis(np.linspace(0, 1, len(z_list)))
         sm = plt.cm.ScalarMappable(cmap='viridis', norm=plt.Normalize(vmin=z_min, vmax=z_max))
-        fig.colorbar(sm)
+        cbar = fig.colorbar(sm)
+        cbar.set_label('$z$', rotation=90)
 
     for i, z in enumerate(z_list):
         zs = z * torch.ones(nr_points, device=ptu.device)
@@ -356,38 +379,28 @@ def plot_decoder(
         ax.plot(ptu.get_numpy(states), reward_pred, color=colors[i])
         reward_preds[i] = reward_pred.squeeze()
 
-    ax.set_xlabel('position')
-    ax.set_ylabel('reward prediction')
-    ax.set_title('Family of decoder functions \n(colored by latent values z)')
-    #ax.set_ylim((-60, 5))
+    ax.set_xlabel('Position')
+    ax.set_ylabel('Reward prediction')
+    #ax.set_title('Family of decoder functions \n(colored by latent values z)')
     fig.tight_layout()
     fig.show()
     if (save_dir is not None) and (save_name is not None):
         fig.savefig(os.path.join(save_dir, save_name), bbox_inches='tight')
 
-    # Additionally, make contour plot
-    fig_con, ax_con = plt.subplots()
-    cf = ax_con.contourf(ptu.get_numpy(states), z_list, reward_preds)
-    fig_con.colorbar(cf)
-    ax_con.set_xlabel('position')
-    ax_con.set_ylabel('z')
-    ax_con.set_title('Contour plot of reward predictions')
-
-    fig_con.tight_layout()
-    fig_con.show()
-    if (save_dir is not None) and (save_name is not None):
-        fig_con.savefig(os.path.join(save_dir, 'contour-' + save_name), bbox_inches='tight')
-
-
-DEFAULT = "../configs/thesis/pseudodata.json"
-LINKED = "../configs/thesis/pseudodata-linked.json"
-MLP_FULLEP = "../configs/pseudodata/cheetah-stationary-target-qR-TimestepMLP-fullEp.json"
-MEANMLP_KL = "../configs/pseudodata/cheetah-stationary-target-qR-MeanTimestepMLP-queryKL.json"
+    # Unused: Additionally, make contour plot
+    # fig_con, ax_con = plt.subplots()
+    # cf = ax_con.contourf(ptu.get_numpy(states), z_list, reward_preds)
+    # fig_con.colorbar(cf)
+    # ax_con.set_xlabel('position')
+    # ax_con.set_ylabel('z')
+    # ax_con.set_title('Contour plot of reward predictions')
+    # fig_con.tight_layout()
+    # fig_con.show()
+    # if (save_dir is not None) and (save_name is not None):
+    #    fig_con.savefig(os.path.join(save_dir, 'contour-' + save_name), bbox_inches='tight')
 
 
-@click.command()
-@click.argument('config', default=DEFAULT)
-def main(config):
+def train_and_plot(config, path_to_weights=None, plot_save_dir=None, plot_save_prefix=''):
     # Load config
     variant = default_config
     if config:
@@ -397,7 +410,7 @@ def main(config):
 
     # Make custom adjustments to the config
     # Mainly, since we want to fully train the encoder at once, not over multiple epochs
-    variant['util_params']['base_log_dir'] = os.path.join('..', 'output_analysis', 'pseudodata')
+    variant['util_params']['base_log_dir'] = os.path.join('..', 'output', 'pseudodata')
     variant['util_params']['temp_dir'] = os.path.join('..', '.temp_cemrl', 'pseudodata')
 
     variant['reconstruction_params']['use_next_state_for_reward_decoder'] = False
@@ -416,54 +429,87 @@ def main(config):
                                            variant['algo_params']['max_path_length'])
     encoder, decoder, reconstruction_trainer, replay_buffer, experiment_log_dir = \
         init_networks(variant, pseudo_generator.obs_dim, pseudo_generator.action_dim)
+
+    if path_to_weights is not None:
+        experiment_log_dir = path_to_weights
+    if plot_save_dir is None:
+        plot_save_dir = experiment_log_dir
+
     ptu.set_gpu_mode(variant['util_params']['use_gpu'], variant['util_params']['gpu_id'])
     for net in [encoder, decoder]:
         net.to(device=ptu.device)
 
-    # Generate pseudodata and put it into stacked replay buffer
-    print('Generating data')
-    for i in range(pseudo_generator.num_tasks):
-        episode = pseudo_generator.generate_episode(i, mode='overshoot_plus')
-        episode_2 = pseudo_generator.generate_episode(i, mode='overshoot_minus')
-        if variant['algo_params']['num_exploration_trajectories_per_task'] == 2:
-            episode_list = ([episode, episode_2], 400)
-            replay_buffer.add_episode_group(episode_list)
-        else:
-            episode_list = ([episode], 200)
-            replay_buffer.add_episode_group(episode_list)
-            episode_list = ([episode_2], 200)
-            replay_buffer.add_episode_group(episode_list)
+    if path_to_weights is None:
+        ### Train encoder and decoder if necessary
+        # Generate pseudodata and put it into stacked replay buffer
+        print('Generating data')
+        for i in range(pseudo_generator.num_tasks):
+            episode = pseudo_generator.generate_episode(i, mode='overshoot_plus')
+            episode_2 = pseudo_generator.generate_episode(i, mode='overshoot_minus')
+            if variant['algo_params']['num_exploration_trajectories_per_task'] == 2:
+                episode_list = ([episode, episode_2], 400)
+                replay_buffer.add_episode_group(episode_list)
+            else:
+                episode_list = ([episode], 200)
+                replay_buffer.add_episode_group(episode_list)
+                episode_list = ([episode_2], 200)
+                replay_buffer.add_episode_group(episode_list)
 
+        replay_buffer.stats_dict = replay_buffer.get_stats()
 
-    replay_buffer.stats_dict = replay_buffer.get_stats()
+        # call reconstructionTrainer on this stacked_replay_buffer, train until completion
+        print('Reconstruction training')
+        reconstruction_trainer.train(variant['algo_params']['num_reconstruction_steps'],
+                                     plot_save_file=os.path.join(experiment_log_dir, 'reconstruction-training-curve.pdf'))
+        logger.dump_tabular(with_prefix=False, with_timestamp=False)
+        torch.save(encoder, os.path.join(experiment_log_dir, 'encoder.pth'))
+        torch.save(decoder, os.path.join(experiment_log_dir, 'decoder.pth'))
+    else:
+        ### Otherwise just load them from disk
+        encoder.load_state_dict(torch.load(os.path.join(path_to_weights, 'encoder.pth'), map_location=ptu.device))
+        decoder.load_state_dict(torch.load(os.path.join(path_to_weights, 'decoder.pth'), map_location=ptu.device))
 
-    # call reconstructionTrainer on this stacked_replay_buffer, train until completion
-    print('Reconstruction training')
-    reconstruction_trainer.train(variant['algo_params']['num_reconstruction_steps'],
-                                 plot_save_file=os.path.join(experiment_log_dir, 'reconstruction-training-curve.pdf'))
-    logger.dump_tabular(with_prefix=False, with_timestamp=False)
 
     # visualize results with existing functions (e.g. on "episode rollout")
     print('Plotting encoder')
-    z_min, z_max = plot_encoder(encoder, pseudo_generator, replay_buffer, variant['algo_params']['time_steps'],
-                                variant['algo_params']['max_path_length'],
-                                [-25, -15, -5, 0, 5, 15, 25],  # [-25, -12.5, 0, 12.5, 25],
-                                save_dir=experiment_log_dir, save_name='latent-encodings.pdf')
+    #z_min, z_max = plot_encoder(encoder, pseudo_generator, replay_buffer, variant['algo_params']['time_steps'],
+    #                            variant['algo_params']['max_path_length'],
+    #                            [-25, -15, -5, 0, 5, 15, 25],  # [-25, -12.5, 0, 12.5, 25],
+    #                            save_dir=experiment_log_dir, save_name='latent-encodings-target-reached.pdf')
     z_min_2, z_max_2 = plot_encoder(encoder, pseudo_generator, replay_buffer, variant['algo_params']['time_steps'],
                                     variant['algo_params']['max_path_length'],
                                     [-25, -15, -5, 0, 5, 15, 25],  # [-25, -12.5, 0, 12.5, 25],
                                     modify_target=True,
-                                    save_dir=experiment_log_dir, save_name='latent-encodings-wrong-trajectory.pdf')
+                                    save_dir=plot_save_dir, save_name=f'{plot_save_prefix}latent-encodings.pdf')
 
-    z_min_2 = min(z_min, z_min_2)
-    z_max_2 = max(z_max, z_max_2)
+    #z_min_2 = min(z_min, z_min_2)
+    #z_max_2 = max(z_max, z_max_2)
 
     # visualize decoder capability showing the function learned for a particular z
     print('Plotting decoder')
-    plot_decoder(replay_buffer, decoder, z_min, z_max,
-                 save_dir=experiment_log_dir, save_name='decoder-functions.pdf')
+    #plot_decoder(replay_buffer, decoder, z_min, z_max,
+    #             save_dir=experiment_log_dir, save_name='decoder-functions-target-reached.pdf')
     plot_decoder(replay_buffer, decoder, z_min_2, z_max_2,
-                 save_dir=experiment_log_dir, save_name='decoder-functions-all.pdf')
+                 save_dir=plot_save_dir, save_name=f'{plot_save_prefix}decoder-functions.pdf')
+
+
+@click.command()
+@click.argument('plot_thesis', default=True)
+@click.argument('train_linked', default=False)
+@click.argument('train_separate', default=False)
+@click.argument('plot_save_dir', default='../../../Thesis/experiments/pseudodata/')
+def main(plot_thesis, train_linked, train_separate, plot_save_dir):
+    if plot_save_dir == '':
+        plot_save_dir = None
+    if plot_thesis:
+        train_and_plot("../configs/thesis/pseudodata-linked.json", "../output/pseudodata/2022_07_15_02_47_07",
+                       plot_save_prefix='linked-', plot_save_dir=plot_save_dir)
+        train_and_plot("../configs/thesis/pseudodata-separate.json", "../output/pseudodata/2022_07_15_02_55_20",
+                       plot_save_prefix='separate-', plot_save_dir=plot_save_dir)
+    if train_linked:
+        train_and_plot("../configs/thesis/pseudodata-linked.json")
+    if train_separate:
+        train_and_plot("../configs/thesis/pseudodata-separate.json")
 
 
 if __name__ == '__main__':
