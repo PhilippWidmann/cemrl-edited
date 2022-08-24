@@ -14,7 +14,7 @@ import pickle
 
 from analysis.encoding import plot_encodings, plot_encodings_split
 from analysis.progress_logger import manage_logging
-from analysis.plot_episode import plot_per_episode, get_plot_specification
+from analysis.plot_episode import plot_per_episode, get_plot_specification, plot_episode_encodings
 import configs.legacy_default
 import configs.analysis_config
 
@@ -23,13 +23,13 @@ from philipp_runner import setup_environment, initialize_networks, load_networks
 #plt.rcParams.update({'font.size': 20})
 
 
-def analysis(variant):
+def analysis(variant, cemrl_compatibility=False):
     if isinstance(variant['showcase_itr'], list):
         l = variant['showcase_itr'].copy()
         for itr in l:
             variant['showcase_itr'] = itr
             try:
-                res = analysis(variant)
+                res = analysis(variant, cemrl_compatibility)
             except FileNotFoundError:
                 warnings.warn(f'Stopped before iteration {itr} because the corresponding savefiles do not exist')
                 exit(1)
@@ -43,7 +43,7 @@ def analysis(variant):
         initialize_networks(variant, env, experiment_log_dir)
 
     if variant['path_to_weights'] is not None:
-        load_networks(variant, networks)
+        load_networks(variant, networks, cemrl_compatibility)
 
     if ptu.gpu_enabled():
         algorithm.to()
@@ -72,8 +72,8 @@ def analysis(variant):
         manage_logging(path_to_folder, save=save)
 
     # plot encodings
-    if variant['analysis_params']['plot_encoding']:
-        plot_encodings_split(showcase_itr, path_to_folder, save=save, save_dir=variant['save_dir'], save_prefix=variant['save_prefix'])
+    #if variant['analysis_params']['plot_encoding']:
+        #plot_encodings_split(showcase_itr, path_to_folder, save=save, save_dir=save_dir, save_prefix=variant['save_prefix'])
 
     cases_dict = {'train': train_example_cases,
                   'test': example_cases,
@@ -92,6 +92,12 @@ def analysis(variant):
                 deterministic=True, max_trajs=0, max_trajs_exploration=1, animated=variant['analysis_params']['visualize_run'], save_frames=False, return_distributions=True,
                 compute_exploration_task_indicators=True)
         results_dict['exploration'][exploration_example_case] = results[0][0][0][0]
+
+    # plot encodings
+    if variant['analysis_params']['plot_encoding']:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize, squeeze=False)
+        plot_episode_encodings(results_dict['test'], fig_ax=(fig, ax[0][0]), color=variant['analysis_params']['color'])
+        all_figures.append((fig, ax))
 
     if False:
         plt.plot(list(range(200)), results_dict[7]['task_indicators'][:, 0])
@@ -381,7 +387,8 @@ def prepare_variant_file(analysis_goal_config):
 @click.option('--use_mp', is_flag=True, default=False)
 @click.option('--docker', is_flag=True, default=False)
 @click.option('--debug', is_flag=True, default=False)
-def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
+@click.option('--cemrl_compatibility', is_flag=True, default=False)
+def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug, cemrl_compatibility):
     variant = prepare_variant_file(configs.analysis_config.analysis_config)
 
     if weights is not None:
@@ -393,7 +400,11 @@ def main(weights, weights_itr, gpu, use_mp, num_workers, docker, debug):
     variant['util_params']['use_multiprocessing'] = use_mp
     variant['util_params']['num_workers'] = num_workers
 
-    analysis(variant)
+    if cemrl_compatibility:
+        variant['algo_params']['encoder_type'] = 'TimestepMLP'
+        variant['env_params']['use_state_decoder'] = True
+
+    analysis(variant, cemrl_compatibility)
 
 
 if __name__ == "__main__":

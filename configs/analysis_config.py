@@ -1,6 +1,6 @@
 analysis_config = dict(
     env_name='cheetash-stationary-dir',
-    path_to_weights='./output/cheetah-halfline-goal-past-and-future-queryKL/2022_07_13_05_56_32',  # CONFIGURE! path to experiment folder
+    path_to_weights='/home/philipp/Dokumente/Uni/Masterarbeit/Code/cemrl/output/toy-goal-line/2022_07_08_14_09_00',#'./output/cheetah-goal/2022_07_30_20_41_18',  # CONFIGURE! path to experiment folder
     save_dir=None,
     save_prefix='',  # CONFIGURE! Prefix for all saved files during analysis run
     showcase_itr=[0, 100, 200, 300, 400, 500],#[0, 5, 10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500],  # CONFIGURE! epoch for which analysis is performed#[0, 5, 10, 25, 50, 75, 100],#
@@ -15,11 +15,11 @@ analysis_config = dict(
     ),
     analysis_params=dict(
         train_example_cases=[],
-        example_cases=[0, 5, 10, 15, 20],#[0, 8, 4, 10],#[1, 29, 6, 15, 5, 19, 8],  #[6, 7, 8, 9, 24],  # [9, 3, 7, 1, 14, 15],  # CONFIGURE! choose an array of test tasks
+        example_cases=[0, 4, 8, 12, 16, 20, 24],#[0, 8, 4, 10],#[1, 29, 6, 15, 5, 19, 8],  #[6, 7, 8, 9, 24],  # [9, 3, 7, 1, 14, 15],  # CONFIGURE! choose an array of test tasks
         num_exploration_cases=0,
         single_episode_plots=[],
         #multiple_episode_plots=[['pos[0]_vs_pos[1]'],],
-        multiple_episode_plots=[['time_vs_task_indicators_fill_time_vs_z_stds', 'time_vs_rewards', 'time_vs_pos_const_time_vs_specification']],
+        multiple_episode_plots=[],#[['time_vs_task_indicators_fill_time_vs_z_stds', 'time_vs_rewards', 'time_vs_pos_const_time_vs_specification']],
         log_and_plot_progress=False,  # CONFIGURE! If True: experiment will be logged to the experiment_database.json and plotted, If already logged: plot only
         save=True,  # CONFIGURE! If True: plots of following options will be saved to the experiment folder
         show=False,
@@ -41,6 +41,7 @@ analysis_config = dict(
         max_path_length=800,
         manipulate_test_task_number=False,  # CONFIGURE! change test_task_number to value specified below
         test_task_number=10,
+        color=None,
     ),
     env_params=dict(
         scripted_policy=False,

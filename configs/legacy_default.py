@@ -34,7 +34,7 @@ legacy_default_config = dict(
         use_data_normalization=True,  # if data become normalized, set in correspondence to use_combination_trainer
         use_sac_data_normalization=False,
         use_parametrized_alpha=False,  # alpha conditioned on z
-        encoder_type='GRU',
+        encoder_type='TimestepMLP',
         encoder_merge_mode="add",  # if encoder_type==TimestepMLP: how to merge y infos: "add", "add_softmax", "multiply", "linear", "mlp"
         encoder_omit_input=None,  # Debug parameter: Should actions be ignored by VAE
         encoder_exclude_padding=False,  # Whether to exclude padding during **training** of the VAE. This decreases performance substantially! Note: During rollouts, padding is always disabled.

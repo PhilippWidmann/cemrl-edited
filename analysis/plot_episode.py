@@ -90,3 +90,16 @@ def plot_per_episode(results, y, scatter=None, const=None, fill=None, x='time', 
     ax.set_title(y.replace('_', ' '))
 
     return fig, ax
+
+
+def plot_episode_encodings(results, fig_ax, color):
+    if fig_ax is not None:
+        fig, ax = fig_ax
+    else:
+        fig, ax = plt.subplots(1, 1)
+
+    positions = np.array([get_quantity(results[i], 'specification')[0] for i in results.keys()])
+    data = np.transpose(np.array([get_quantity(results[i], 'task_indicators') for i in results.keys()]))
+    ax.boxplot(data, positions=positions, showfliers=False, showbox=False, showcaps=False, widths=0.1,
+               medianprops={"linewidth": 10, 'color': color}, whiskerprops={'color': 'white'})
+    return fig, ax

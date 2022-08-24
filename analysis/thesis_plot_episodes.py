@@ -4,6 +4,7 @@ import warnings
 import click
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 from analysis_runner import analysis, prepare_variant_file
 from thesis_plot_progress import DEFAULTS, SMALL_SIZE, MEDIUM_SIZE, BIGGER_SIZE, COLOR_CYCLER, \
@@ -52,6 +53,7 @@ DEFAULT_CONFIG = dict(
         y_label='Position',
         xlim=(None, None),
         ylim=(None, None),
+        xticks=None,
     )
 )
 
@@ -209,7 +211,53 @@ CONFIGS = {
         train_example_cases=[0, 5, 10, 15, 20, 25, 30, 35],
         figsize=FIGSIZE_HALF_SQUARE,
         showcase_itr=450,
-    )
+    ),
+    "toy-goal-boxplot-ours": dict(
+        path_to_weights='../output/toy-goal-line/2022_07_06_06_02_34',
+        save_names='toy-goal-line/encoding-boxplot-ours',
+        example_cases=[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24],
+        plot_encoding=True,
+        xlim=(-28, 28),
+        xticks=np.arange(-25, 25.1, 12.5),
+        figsize=FIGSIZE_HALF,
+        showcase_itr=100,
+        x_label=['Goal'],
+        y_label=['$z$'],
+        color=COLOR_CYCLER['default'].by_key()['color'][0]
+    ),
+    "toy-goal-boxplot-cemrl": dict(
+        cemrl_compatibility=True,
+        path_to_weights='../../cemrl/output/toy-goal-line/2022_07_15_03_06_51',
+        save_names='toy-goal-line/encoding-boxplot-cemrl',
+        example_cases=[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24],
+        plot_encoding=True,
+        xlim=(-28, 28),
+        xticks=np.arange(-25, 25.1, 12.5),
+        figsize=FIGSIZE_HALF,
+        showcase_itr=100,
+        x_label=['Goal'],
+        y_label=['$z$'],
+        color=COLOR_CYCLER['default'].by_key()['color'][1]
+    ),
+    "toy-goal-episode-encodings-ours": dict(
+        path_to_weights='../output/toy-goal-line/2022_07_06_06_02_34',
+        save_names=['toy-goal-line/positions-episode-ours'],
+        multiple_episode_plots=[['time_vs_pos_const_time_vs_specification']],
+        y_label=['Position'],
+        example_cases=[0, 4, 8, 12, 16, 20, 24],
+        figsize=FIGSIZE_HALF,
+        showcase_itr=100,
+    ),
+    "toy-goal-episode-encodings-cemrl": dict(
+        cemrl_compatibility=True,
+        path_to_weights='../../cemrl/output/toy-goal-line/2022_07_15_03_06_51',
+        save_names=['toy-goal-line/positions-episode-cemrl'],
+        multiple_episode_plots=[['time_vs_pos_const_time_vs_specification']],
+        y_label=['Position'],
+        example_cases=[0, 4, 8, 12, 16, 20, 24],
+        figsize=FIGSIZE_HALF,
+        showcase_itr=100,
+    ),
 }
 
 
@@ -231,7 +279,7 @@ def copy_analysis_param(param, variant, config):
 @click.command()
 @click.option('--save_dir', default="../../../Thesis/experiments/")
 def main(save_dir):
-    config_names = ("cheetah-goal-exploration-run-2", "cheetah-goal-exploration-run-bad",)
+    config_names = ("toy-goal-episode-encodings-cemrl", "toy-goal-episode-encodings-ours",)
     if config_names is None:
         config_names = CONFIGS.keys()
     for config_name in config_names:
@@ -248,15 +296,25 @@ def main(save_dir):
         copy_analysis_param('train_example_cases', variant, config)
         copy_analysis_param('single_episode_plots', variant, config)
         copy_analysis_param('multiple_episode_plots', variant, config)
+        copy_analysis_param('plot_encoding', variant, config)
         copy_analysis_param('figsize', variant, config)
+        copy_analysis_param('color', variant, config)
+
+        cemrl_compatibility = config['cemrl_compatibility'] if 'cemrl_compatibility' in config.keys() else False
+        if cemrl_compatibility:
+            variant['algo_params']['encoder_type'] = 'TimestepMLP'
+            variant['env_params']['use_state_decoder'] = True
 
         # Make figure
-        fig_ax_list = analysis(variant)
+        fig_ax_list = analysis(variant, cemrl_compatibility=cemrl_compatibility)
         for i, (fig, ax) in enumerate(fig_ax_list):
             ax = ax[0, 0]
             ax.set_title(get_plot_param('title', i, config))
             ax.set_xlabel(get_plot_param('x_label', i, config))
             ax.set_ylabel(get_plot_param('y_label', i, config))
+            if get_plot_param('xticks', i, config) is not None:
+                ax.set_xticks(get_plot_param('xticks', i, config))
+                ax.set_xticklabels(get_plot_param('xticks', i, config))
             ax.set_xlim(get_plot_param('xlim', i, config))
             ax.set_ylim(get_plot_param('ylim', i, config))
             fig.tight_layout()

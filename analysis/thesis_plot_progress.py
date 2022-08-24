@@ -38,6 +38,7 @@ DEFAULTS = {
     'x_scale': 'log',
     'x_label': None,
     'y_label': None,
+    'xticks': None,
     'title': None,
     'legend_config': None,
     'color_cycler': 'default',
@@ -78,8 +79,9 @@ CONFIGS = {
             },
             {
                 'name': 'CEMRL',
-                'dirs': ("../../cemrl/output/cheetah-stationary-targetTwosided/2022_07_11_11_43_50",
-                         "../../cemrl/output/cheetah-stationary-targetTwosided/2022_07_11_11_43_50",),
+                'dirs': ("../../cemrl/output/cheetah-stationary-targetTwosided/2022_08_02_22_42_35",
+                         "../../cemrl/output/cheetah-stationary-targetTwosided/2022_08_04_17_47_02",
+                         "../../cemrl/output/cheetah-stationary-targetTwosided/2022_08_05_10_04_53",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
             },
@@ -233,7 +235,8 @@ CONFIGS = {
             {
                 'name': 'Ours',
                 'dirs': ("../output/mw-reach-line/2022_07_12_20_46_43",
-                         "../output/mw-reach-line/2022_08_03_17_43_54",),
+                         "../output/mw-reach-line/2022_08_03_17_43_54",
+                         "../output/mw-reach-line/2022_08_06_09_52_31",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
@@ -241,9 +244,18 @@ CONFIGS = {
             {
                 'name': 'CEMRL',
                 'dirs': ("../../cemrl/output/metaworld-ml1-reach-line-action-restricted-distReward/2022_07_13_23_37_46",
-                         "../../cemrl/output/metaworld-ml1-reach-line-action-restricted-distReward/2022_08_03_21_17_46",),
+                         "../../cemrl/output/metaworld-ml1-reach-line-action-restricted-distReward/2022_08_03_21_17_46",
+                         "../../cemrl/output/metaworld-ml1-reach-line-action-restricted-distReward/2022_08_04_12_50_30",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
+            },
+            {
+                'name': 'PEARL',
+                'dirs': ("../../pearl/output/metaworld-ml1-reach-line-action-restricted-distReward/2022_08_17_12_34_57",
+                         "../../pearl/output/metaworld-ml1-reach-line-action-restricted-distReward/2022_08_17_12_33_18",
+                         "../../pearl/output/metaworld-ml1-reach-line-action-restricted-distReward/2022_08_17_12_24_16",),
+                'x': 'Number of env steps total',
+                'y': 'AverageReturn_all_test_tasks',
             },
         )
     },
@@ -256,7 +268,8 @@ CONFIGS = {
             {
                 'name': 'Ours',
                 'dirs': ("../output/mw-reach-line/2022_07_12_20_46_43",
-                         "../output/mw-reach-line/2022_08_03_17_43_54",),
+                         "../output/mw-reach-line/2022_08_03_17_43_54",
+                         "../output/mw-reach-line/2022_08_06_09_52_31",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
@@ -316,24 +329,32 @@ CONFIGS = {
         'title': 'cheetah-goal-line',
         'color_cycler': 'variant',
         'ylim': [-2800, -500],
+        'xlim': [100000, None],
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",),
+                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",
+                         "../output/cheetah-goal/2022_07_30_20_41_18",
+                         #"../output/cheetah-goal/2022_07_08_10_44_48",  # This is the bad run
+                         "../output/cheetah-goal/2022_07_10_07_50_51"),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'Ours (no linked episodes)',
-                'dirs': ("../output/cheetah-goal-separateEpisodes/2022_07_10_10_00_00",),
+                'dirs': ("../output/cheetah-goal-separateEpisodes-with-exploration/2022_08_11_08_31_22",
+                         "../output/cheetah-goal-separateEpisodes-with-exploration/2022_08_11_08_31_26",
+                         "../output/cheetah-goal-separateEpisodes/2022_07_10_10_00_00",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'Ours (no exploration)',
-                'dirs': ("../output/cheetah-goal-noExploration/2022_07_11_22_17_47",),
+                'dirs': ("../output/cheetah-goal-noExploration/2022_07_11_22_17_47",
+                         "../output/cheetah-goal-noExploration/2022_07_26_14_41_18",
+                         "../output/cheetah-goal-noExploration/2022_07_28_01_01_40",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
@@ -345,24 +366,32 @@ CONFIGS = {
         'y_label': 'Test success rate',
         'title': 'cheetah-goal-line',
         'color_cycler': 'variant',
+        'xlim': [100000, None],
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",),
+                'dirs': ("../output/cheetah-goal/2022_07_09_10_24_13",
+                         "../output/cheetah-goal/2022_07_30_20_41_18",
+                         #"../output/cheetah-goal/2022_07_08_10_44_48",  # This is the bad run
+                         "../output/cheetah-goal/2022_07_10_07_50_51"),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
             },
             {
                 'name': 'Ours (no linked episodes)',
-                'dirs': ("../output/cheetah-goal-separateEpisodes/2022_07_10_10_00_00",),
+                'dirs': ("../output/cheetah-goal-separateEpisodes-with-exploration/2022_08_11_08_31_22",
+                         "../output/cheetah-goal-separateEpisodes-with-exploration/2022_08_11_08_31_26",
+                         "../output/cheetah-goal-separateEpisodes/2022_07_10_10_00_00",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
             },
             {
                 'name': 'Ours (no exploration)',
-                'dirs': ("../output/cheetah-goal-noExploration/2022_07_11_22_17_47",),
+                'dirs': ("../output/cheetah-goal-noExploration/2022_07_11_22_17_47",
+                         "../output/cheetah-goal-noExploration/2022_07_26_14_41_18",
+                         "../output/cheetah-goal-noExploration/2022_07_28_01_01_40",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
@@ -379,20 +408,26 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Ours',
-                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",),
+                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",
+                         "../output/toy-goal-2D/2022_08_04_08_50_52",
+                         "../output/toy-goal-2D/2022_08_07_01_53_13",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
             {
                 'name': 'CEMRL',
-                'dirs': ("../../cemrl/output/toy-goal-plane/2022_07_13_07_54_32",),
+                'dirs': ("../../cemrl/output/toy-goal-plane/2022_07_13_07_54_32",
+                         "../../cemrl/output/toy-goal-plane/2022_08_01_23_10_48",
+                         "../../cemrl/output/toy-goal-plane/2022_08_02_14_24_37",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_avg_reward_deterministic',
             },
             {
                 'name': 'PEARL',
-                'dirs': ("../../pearl/output/toy-goal-plane/2022_07_12_22_18_09",),
+                'dirs': ("../../pearl/output/toy-goal-plane/2022_07_12_22_18_09",
+                         "../../pearl/output/toy-goal-plane/2022_07_29_16_01_35",
+                         "../../pearl/output/toy-goal-plane/2022_07_30_00_31_31",),
                 'x': 'Number of env steps total',
                 'y': 'AverageReturn_all_test_tasks',
             },
@@ -407,14 +442,18 @@ CONFIGS = {
         'groups': (
             {
                 'name': 'Meta-testing set',
-                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",),
+                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",
+                         "../output/toy-goal-2D/2022_08_04_08_50_52",
+                         "../output/toy-goal-2D/2022_08_07_01_53_13",),
                 'x': 'n_env_steps_total',
                 'y': 'test_eval_success_rate',
                 'x_correction': True
             },
             {
                 'name': 'Meta-training set',
-                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",),
+                'dirs': ("../output/toy-goal-2D/2022_07_12_17_30_36",
+                         "../output/toy-goal-2D/2022_08_04_08_50_52",
+                         "../output/toy-goal-2D/2022_08_07_01_53_13",),
                 'x': 'n_env_steps_total',
                 'y': 'train_eval_success_rate',
                 'x_correction': True
@@ -424,8 +463,8 @@ CONFIGS = {
 }
 
 
-def load_progress_log(dir, file=''):
-    return pd.read_csv(os.path.join(dir, 'progress.csv'))
+def load_progress_log(log_dir, file='progress.csv'):
+    return pd.read_csv(os.path.join(log_dir, file))
 
 
 def get_param(param_name, config):
@@ -483,15 +522,10 @@ def print_legend(fig, ax, legend_names, legend_config):
         ax.legend(legend_names)
         fig.tight_layout()
     elif legend_config == 'halfline-ablation':
-        #ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", borderaxespad=0)
-        #ax.legend(legend_names, title='Decoder window $c^{dec}_t$', handlelength=1, bbox_to_anchor=(0.95, 0.5), loc="center left")
-        #ax.legend(legend_names, title='Decoder window $c^{dec}_t$', handlelength=1, loc='upper center', bbox_to_anchor=(0.5, -0.3), ncol=2)
         fig.legend(legend_names, handlelength=1, loc='lower center',
                   bbox_to_anchor=(0.5, 0), ncol=2)
         fig.tight_layout(rect=[0, 0.22, 1, 1])
         #ax.ticklabel_format(style='sci', scilimits=(0, 0), axis='y')
-        #fig.legend(legend_names, loc='lower left', bbox_to_anchor=(0, 0), ncol=2)
-        #fig.subplots_adjust(bottom=0.7)
     else:
         raise ValueError(f'Unknown legend config {legend_config}')
 
@@ -500,7 +534,7 @@ def print_legend(fig, ax, legend_names, legend_config):
 @click.command()
 @click.option('--save_dir', default="../../../Thesis/experiments/")
 def main(save_dir):
-    config_names = None#('cheetah-goal/cheetah-goal',)
+    config_names = ('mw-goal-line',)
     if config_names is None:
         config_names = CONFIGS.keys()
     for config_name in config_names:

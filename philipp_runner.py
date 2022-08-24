@@ -1,6 +1,7 @@
 # Continuous Environment Meta Reinforcement Learning (CEMRL)
 
 import os
+from collections import OrderedDict
 from pathlib import Path
 import numpy as np
 import click
@@ -388,11 +389,16 @@ def initialize_networks(variant, env, experiment_log_dir):
     return algorithm, networks, rollout_coordinator, replay_buffer, train_tasks, test_tasks
 
 
-def load_networks(variant, networks):
+def load_networks(variant, networks, cemrl_compatibility):
     itr = variant['showcase_itr']
     path = variant['path_to_weights']
     for name, net in networks.items():
-        net.load_state_dict(torch.load(os.path.join(path, name + '_itr_' + str(itr) + '.pth'), map_location='cpu'))
+        state_dict = torch.load(os.path.join(path, name + '_itr_' + str(itr) + '.pth'), map_location='cpu')
+        if cemrl_compatibility:
+            if name == 'encoder':
+                state_dict = OrderedDict((key.replace('shared_encoder', 'shared_encoder.layers'), val)
+                                         for key, val in state_dict.items())
+        net.load_state_dict(state_dict)
 
 
 def experiment(variant):
