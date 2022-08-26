@@ -51,6 +51,7 @@ COLOR_CYCLER = {
     'blue': cycler('color', ['#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4', '#1f77b4']),
     #'variant': cycler('color', ['#1f77b4', '#d62728', '#e377c2', '#8c564b', '#9467bd', '#7f7f7f', '#bcbd22', '#17becf', '#ff7f0e', '#2ca02c']),
     'variant': cycler('color', ["#0072B2", "#E69F00", "#CC79A7", "#56B4E9", "#D55E00", "#009E73", "#F0E442", "#000000", "#E69F00", "#56B4E9"]),
+    'thesis_defense': cycler('color', ["#D55E00", "#009E73", "#F0E442", "#E69F00", "#56B4E9", "#CC79A7", "#000000", "#E69F00", "#56B4E9", "#0072B2"]),
 }
 
 LINE_CYCLER = {
@@ -192,6 +193,30 @@ CONFIGS = {
                 'y': 'test_eval_avg_reward_deterministic',
                 'x_correction': True
             },
+            {
+                'name': 'CEMRL',
+                'dirs': ("../../cemrl/output/toy-goal-line/2022_07_08_14_09_00",
+                         "../../cemrl/output/toy-goal-line/2022_07_15_03_06_51",
+                         "../../cemrl/output/toy-goal-line/2022_08_01_18_10_57",),
+                'x': 'n_env_steps_total',
+                'y': 'test_eval_avg_reward_deterministic',
+            },
+            {
+                'name': 'PEARL',
+                'dirs': ("../../pearl/output/toy-goal-line/2022_07_08_18_28_06",
+                         "../../pearl/output/toy-goal-line/2022_07_15_03_06_10",
+                         "../../pearl/output/toy-goal-line/2022_07_29_16_00_52",),
+                'x': 'Number of env steps total',
+                'y': 'AverageReturn_all_test_tasks',
+            },
+        )
+    },
+    'thesis-defense/toy-goal-line-without-ours': {
+        'x_label': 'Training transition $n$',
+        'y_label': 'Average return $\hat{R}$',
+        'title': 'toy-goal-line',
+        'color_cycler': 'thesis_defense',
+        'groups': (
             {
                 'name': 'CEMRL',
                 'dirs': ("../../cemrl/output/toy-goal-line/2022_07_08_14_09_00",
@@ -534,7 +559,7 @@ def print_legend(fig, ax, legend_names, legend_config):
 @click.command()
 @click.option('--save_dir', default="../../../Thesis/experiments/")
 def main(save_dir):
-    config_names = ('mw-goal-line',)
+    config_names = ('thesis-defense/toy-goal-line-without-ours',)
     if config_names is None:
         config_names = CONFIGS.keys()
     for config_name in config_names:

@@ -258,6 +258,16 @@ CONFIGS = {
         figsize=FIGSIZE_HALF,
         showcase_itr=100,
     ),
+    "toy-goal-episode-rewards-cemrl": dict(
+        cemrl_compatibility=True,
+        path_to_weights='../../cemrl/output/toy-goal-line/2022_07_15_03_06_51',
+        save_names=['thesis-defense/toy-goal-line-rewards-cemrl'],
+        multiple_episode_plots=[['time_vs_rewards']],
+        y_label=['Reward $r$'],
+        example_cases=[0, 4, 8, 12, 16, 20, 24],
+        figsize=FIGSIZE_HALF,
+        showcase_itr=100,
+    ),
 }
 
 
@@ -279,7 +289,7 @@ def copy_analysis_param(param, variant, config):
 @click.command()
 @click.option('--save_dir', default="../../../Thesis/experiments/")
 def main(save_dir):
-    config_names = ("toy-goal-episode-encodings-cemrl", "toy-goal-episode-encodings-ours",)
+    config_names = ("toy-goal-episode-rewards-cemrl", )
     if config_names is None:
         config_names = CONFIGS.keys()
     for config_name in config_names:
