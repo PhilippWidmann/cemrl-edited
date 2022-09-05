@@ -9,23 +9,23 @@ import json
 import torch
 import gym
 
-from cerml.exploration_agent import construct_exploration_agent
+from cemrl_edited.exploration_agent import construct_exploration_agent
 
 gym.logger.set_level(40)
 
-from cerml.policy_networks import SingleSAC, MultipleSAC
+from cemrl_edited.policy_networks import SingleSAC, MultipleSAC
 from rlkit.envs.wrappers import NormalizedBoxEnv, CameraWrapper
 from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
 
-from cerml.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP
-from cerml.sac import PolicyTrainer
-from cerml.stacked_replay_buffer import StackedReplayBuffer
-from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
-from cerml.rollout_worker import RolloutCoordinator
-from cerml.agent import CEMRLAgent, ScriptedPolicyAgent
-from cerml.cemrl_algorithm import CEMRLAlgorithm
+from cemrl_edited.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP
+from cemrl_edited.sac import PolicyTrainer
+from cemrl_edited.stacked_replay_buffer import StackedReplayBuffer
+from cemrl_edited.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
+from cemrl_edited.rollout_worker import RolloutCoordinator
+from cemrl_edited.agent import CEMRLAgent, ScriptedPolicyAgent
+from cemrl_edited.cemrl_algorithm import CEMRLAlgorithm
 from meta_rand_envs.wrappers import ENVS
 
 

@@ -10,7 +10,7 @@ from torch import nn as nn
 import gtimer as gt
 
 import rlkit.torch.pytorch_util as ptu
-from cerml.policy_networks import SACNetworks
+from cemrl_edited.policy_networks import SACNetworks
 from rlkit.core.eval_util import create_stats_ordered_dict
 
 import matplotlib.pyplot as plt

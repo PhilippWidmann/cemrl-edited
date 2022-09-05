@@ -4,7 +4,7 @@ import numpy as np
 from rlkit.torch.core import np_ify
 import rlkit.torch.pytorch_util as ptu
 
-from cerml.scripted_policies import policies
+from cemrl_edited.scripted_policies import policies
 
 class CEMRLAgent(nn.Module):
     def __init__(self,

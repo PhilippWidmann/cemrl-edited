@@ -5,8 +5,8 @@ import torch.nn.functional as F
 
 from rlkit.torch.networks import Mlp
 import rlkit.torch.pytorch_util as ptu
-from cerml.utils import process_gaussian_parameters
-from cerml.shared_encoder_variants import SharedEncoderTimestepMLP, SharedEncoderTrajectoryMLP, SharedEncoderGRU, \
+from cemrl_edited.utils import process_gaussian_parameters
+from cemrl_edited.shared_encoder_variants import SharedEncoderTimestepMLP, SharedEncoderTrajectoryMLP, SharedEncoderGRU, \
     SharedEncoderConv, SharedEncoderFCN, SharedEncoderMeanTimestepMLP
 
 

@@ -53,6 +53,6 @@ To simply generate the plots used in the thesis, use the scripts `analysis/thesi
 
 
 ## Things to notice
-- Most relevant code for the `cemrl-edited` algorithm itself is in the folder `./cerml`.
+- Most relevant code for the `cemrl-edited` algorithm itself is in the folder `./cemrl_edited`.
 - Experiments are configured via `json` configuration files located in `./configs`, include a basic default configuration `./configs/default.py`.
 - Adjust the `max_replay_buffer_size` according to the amount of collected data and supported memory.

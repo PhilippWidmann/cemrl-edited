@@ -8,9 +8,9 @@ import torch
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from cerml.encoder_decoder_networks import DecoderMDP, Encoder, PriorPz
-from cerml.reconstruction_trainer import ReconstructionTrainer
-from cerml.stacked_replay_buffer import StackedReplayBuffer
+from cemrl_edited.encoder_decoder_networks import DecoderMDP, Encoder, PriorPz
+from cemrl_edited.reconstruction_trainer import ReconstructionTrainer
+from cemrl_edited.stacked_replay_buffer import StackedReplayBuffer
 from analysis.plot_episode import plot_per_episode
 from configs.default import default_config
 from rlkit.launchers.launcher_util import setup_logger

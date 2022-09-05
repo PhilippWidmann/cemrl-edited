@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.distributions.kl as kl
-from cerml.utils import process_gaussian_parameters
+from cemrl_edited.utils import process_gaussian_parameters
 import rlkit.torch.pytorch_util as ptu
 
 from rlkit.core import logger
