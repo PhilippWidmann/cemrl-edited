@@ -21,8 +21,6 @@ import rlkit.torch.pytorch_util as ptu
 from configs.default import default_config
 
 from cerml.encoder_decoder_networks import PriorPz, Encoder, DecoderMDP
-from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEncoder, SpecialOmissionEncoder, \
-    SpecialOmissionDecoder
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
@@ -88,21 +86,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['decoder_time_window'] = [-time_steps, 0]
 
     # encoder used: single transitions or trajectories
-    if variant['algo_params']['encoder_type'] == 'NoEncoder':
-        # debug case: completely omit any encoding and only do SAC training
-        encoder_class = NoOpEncoder
-    elif variant['algo_params']['encoder_omit_input'] == 'action':
-        encoder_class = NoActionEncoder
-    elif variant['algo_params']['encoder_omit_input'] == 'special':
-        encoder_class = SpecialOmissionEncoder
-        variant['algo_params']['encoder_omit_input'] = None
-    elif isinstance(variant['algo_params']['encoder_omit_input'], list):
-        encoder_class = SpecialOmissionEncoder
-    else:
-        encoder_class = Encoder
-        variant['algo_params']['encoder_omit_input'] = None
-
-    encoder = encoder_class(
+    encoder = Encoder(
         obs_dim,
         action_dim,
         reward_dim,
@@ -119,12 +103,7 @@ def initialize_networks(variant, env, experiment_log_dir):
         relevant_input_indices=variant['algo_params']['encoder_omit_input']
     )
 
-    if variant['algo_params']['decoder_omit_input'] == 'special':
-        decoder_class = SpecialOmissionDecoder
-    else:
-        decoder_class = DecoderMDP
-
-    decoder = decoder_class(
+    decoder = DecoderMDP(
         action_dim,
         obs_dim,
         reward_dim,
