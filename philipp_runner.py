@@ -9,7 +9,6 @@ import json
 import torch
 import gym
 
-from cerml.debug_encoding import EncodingDebugger
 from cerml.exploration_agent import construct_exploration_agent
 
 gym.logger.set_level(40)
@@ -255,32 +254,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         alpha=variant['algo_params']['sac_alpha']
     )
 
-    # Encoding Debug information; not necessary if code is used in production
-    if variant['util_params']['debug_encoding'] and (variant['algo_params']['encoder_type'] != 'NoEncoder'):
-        encoding_debugger = EncodingDebugger(
-            action_dim,
-            obs_dim,
-            reward_dim,
-            latent_dim,
-            net_complex_enc_dec,
-            encoder,
-            decoder,
-            replay_buffer,
-            variant['algo_params']['batch_size_reconstruction'],
-            variant['algo_params']['batch_size_validation'],
-            num_classes,
-            variant['reconstruction_params']['lr_decoder'],
-            variant['env_params']['state_reconstruction_clip'],
-            variant['algo_params']['use_data_normalization'],
-            variant['reconstruction_params']['train_val_percent'],
-            variant['reconstruction_params']['eval_interval'],
-            variant['reconstruction_params']['early_stopping_threshold'],
-            experiment_log_dir,
-            variant['util_params']['temp_dir'],
-        )
-    else:
-        encoding_debugger = None
-
     relabeler = Relabeler(
         encoder,
         replay_buffer,
@@ -324,7 +297,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['exploration_fixed_probability'],
         experiment_log_dir,
         latent_dim,
-        encoding_debugger,
     )
 
     return algorithm, networks, rollout_coordinator, replay_buffer, train_tasks, test_tasks

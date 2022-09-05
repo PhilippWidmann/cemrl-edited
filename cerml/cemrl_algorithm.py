@@ -46,8 +46,6 @@ class CEMRLAlgorithm:
                  exploration_fixed_probability,
                  experiment_log_dir,
                  latent_dim,
-
-                 encoding_debugger,
                  ):
         self.replay_buffer = replay_buffer
         self.rollout_coordinator = rollout_coordinator
@@ -87,8 +85,6 @@ class CEMRLAlgorithm:
         self.snapshot_gap = snapshot_gap
         self.num_showcase_deterministic = num_showcase_deterministic
         self.num_showcase_non_deterministic = num_showcase_non_deterministic
-
-        self.encoding_debugger = encoding_debugger
 
         self._n_env_steps_total = 0
 
@@ -179,12 +175,6 @@ class CEMRLAlgorithm:
                 self.relabeler.relabel()
             gt.stamp('relabeler')
 
-            # Intermission: Collect debug information on the encoding
-            if self.encoding_debugger is not None:
-                print("Encoding debug information ...")
-                self.encoding_debugger.record_debug_info(self.num_reconstruction_steps)
-            gt.stamp('debug_encoding')
-
             # 4.a Train exploration agent
             if self.use_exploration_agent:
                 print("Exploration agent trainer ...")
@@ -244,7 +234,6 @@ class CEMRLAlgorithm:
             tabular_statistics['time_data_collection'] = times_itrs['data_collection'][-1]
             tabular_statistics['time_reconstruction_trainer'] = times_itrs['reconstruction_trainer'][-1]
             tabular_statistics['time_relabeler'] = times_itrs['relabeler'][-1]
-            tabular_statistics['time_debug_encoding'] = times_itrs['debug_encoding'][-1]
             tabular_statistics['time_exploration_agent'] = times_itrs['exploration_agent'][-1]
             tabular_statistics['time_policy_trainer'] = times_itrs['policy_trainer'][-1]
             tabular_statistics['time_evaluation'] = times_itrs['evaluation'][-1]
