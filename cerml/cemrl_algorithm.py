@@ -18,7 +18,6 @@ class CEMRLAlgorithm:
                  rollout_coordinator,
                  reconstruction_trainer,
                  policy_trainer,
-                 relabeler,
                  agent,
                  exploration_agent,
                  networks,
@@ -40,7 +39,6 @@ class CEMRLAlgorithm:
                  snapshot_gap,
                  num_showcase_deterministic,
                  num_showcase_non_deterministic,
-                 use_relabeler,
                  use_exploration_agent,
                  exploration_by_probability,
                  exploration_fixed_probability,
@@ -51,7 +49,6 @@ class CEMRLAlgorithm:
         self.rollout_coordinator = rollout_coordinator
         self.reconstruction_trainer = reconstruction_trainer
         self.policy_trainer = policy_trainer
-        self.relabeler = relabeler
         self.agent = agent
         self.exploration_agent = exploration_agent
         self.networks = networks
@@ -70,7 +67,6 @@ class CEMRLAlgorithm:
         self.num_trajectories_per_task = num_trajectories_per_task
         self.num_exploration_trajectories_per_task = num_exploration_trajectories_per_task
         self.num_eval_trajectories = num_eval_trajectories
-        self.use_relabeler = use_relabeler
         self.use_exploration_agent = use_exploration_agent
         self.exploration_by_probability = exploration_by_probability
         self.exploration_fixed_probability = exploration_fixed_probability
@@ -170,18 +166,13 @@ class CEMRLAlgorithm:
             self.reconstruction_trainer.train(self.num_reconstruction_steps)
             gt.stamp('reconstruction_trainer')
 
-            # 3. relabel the data regarding z with relabeler
-            if self.use_relabeler:
-                self.relabeler.relabel()
-            gt.stamp('relabeler')
-
-            # 4.a Train exploration agent
+            # 3. Train exploration agent
             if self.use_exploration_agent:
                 print("Exploration agent trainer ...")
                 self.exploration_agent.train_agent(steps=self.num_exploration_steps)
             gt.stamp('exploration_agent')
 
-            # 4.b train policy via SAC with data from the replay buffer
+            # 4. train policy via SAC with data from the replay buffer
             print("Policy Trainer ...")
             temp, sac_stats = self.policy_trainer.train(self.num_policy_steps)
             tabular_statistics.update(sac_stats)
@@ -216,12 +207,6 @@ class CEMRLAlgorithm:
                 # Also: Only save initial agent if it is not trained further during epochs to save space
                 if self.use_exploration_agent and (epoch == 0 or self.num_exploration_steps > 0):
                     self.exploration_agent.save_agent(epoch)
-                # store encoding
-                # if we don't use the relabeler, the encodings are inaccurate and should not be used
-                if self.use_relabeler:
-                    encoding_storage = self.replay_buffer.check_enc()
-                    pickle.dump(encoding_storage,
-                                open(os.path.join(self.experiment_log_dir, "encoding_" + str(epoch) + ".p"), "wb"))
 
                 # replay stats dict
                 pickle.dump(self.replay_buffer.stats_dict,
@@ -233,7 +218,6 @@ class CEMRLAlgorithm:
             times_itrs = gt.get_times().stamps.itrs
             tabular_statistics['time_data_collection'] = times_itrs['data_collection'][-1]
             tabular_statistics['time_reconstruction_trainer'] = times_itrs['reconstruction_trainer'][-1]
-            tabular_statistics['time_relabeler'] = times_itrs['relabeler'][-1]
             tabular_statistics['time_exploration_agent'] = times_itrs['exploration_agent'][-1]
             tabular_statistics['time_policy_trainer'] = times_itrs['policy_trainer'][-1]
             tabular_statistics['time_evaluation'] = times_itrs['evaluation'][-1]

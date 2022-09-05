@@ -25,7 +25,6 @@ from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
 from cerml.rollout_worker import RolloutCoordinator
 from cerml.agent import CEMRLAgent, ScriptedPolicyAgent
-from cerml.relabeler import Relabeler
 from cerml.cemrl_algorithm import CEMRLAlgorithm
 from meta_rand_envs.wrappers import ENVS
 
@@ -254,21 +253,11 @@ def initialize_networks(variant, env, experiment_log_dir):
         alpha=variant['algo_params']['sac_alpha']
     )
 
-    relabeler = Relabeler(
-        encoder,
-        replay_buffer,
-        variant['algo_params']['batch_size_relabel'],
-        action_dim,
-        obs_dim,
-        variant['algo_params']['use_data_normalization'],
-    )
-
     algorithm = CEMRLAlgorithm(
         replay_buffer,
         rollout_coordinator,
         reconstruction_trainer,
         policy_trainer,
-        relabeler,
         agent,
         exploration_agent,
         networks,
@@ -291,7 +280,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['snapshot_gap'],
         variant['algo_params']['num_showcase_deterministic'],
         variant['algo_params']['num_showcase_non_deterministic'],
-        variant['algo_params']['use_relabeler'],
         variant['algo_params']['exploration_agent'] is not None,
         variant['algo_params']['exploration_by_probability'],
         variant['algo_params']['exploration_fixed_probability'],

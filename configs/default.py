@@ -28,7 +28,6 @@ default_config = dict(
     algo_params=dict(
         policy_mode='sac_single',   # UNUSED; Setting for early experiments allowing multiple SAC modules (akin to hierarchical learning)
         num_policy_nets=1,  # UNUSED; Setting for early experiments allowing multiple SAC modules (akin to hierarchical learning)
-        use_relabeler=False, # if data should be relabeled
         use_combination_trainer=False,  # if combination trainer (gradients from Decoder and SAC should be used, currently broken
         use_data_normalization=False,  # if data become normalized for the task inference module (False seemed slightly better)
         use_sac_data_normalization=False,   # whether data for the SAC should also be normalized (False much better; True does not work)

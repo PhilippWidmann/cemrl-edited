@@ -28,7 +28,6 @@ legacy_default_config = dict(
     algo_params=dict(
         policy_mode='sac_single',
         num_policy_nets=1,
-        use_relabeler=False, # if data should be relabeled
         use_combination_trainer=False,  # if combination trainer (gradients from Decoder and SAC should be used, currently broken
         use_data_normalization=True,  # if data become normalized, set in correspondence to use_combination_trainer
         use_sac_data_normalization=False,
