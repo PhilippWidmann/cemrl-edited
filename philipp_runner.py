@@ -26,7 +26,6 @@ from cerml.experimental_encoder_decoder_networks import NoOpEncoder, NoActionEnc
 from cerml.sac import PolicyTrainer
 from cerml.stacked_replay_buffer import StackedReplayBuffer
 from cerml.reconstruction_trainer import ReconstructionTrainer, NoOpReconstructionTrainer
-# from cerml.combination_trainer import CombinationTrainer
 from cerml.rollout_worker import RolloutCoordinator
 from cerml.agent import CEMRLAgent, ScriptedPolicyAgent
 from cerml.relabeler import Relabeler
@@ -303,41 +302,6 @@ def initialize_networks(variant, env, experiment_log_dir):
     else:
         encoding_debugger = None
 
-    # Combination trainer not supported right now
-    """
-    combination_trainer = CombinationTrainer(
-        # from reconstruction trainer
-        encoder,
-        decoder,
-        prior_pz,
-        replay_buffer,
-        variant['algo_params']['batch_size_reconstruction'],
-        num_classes,
-        latent_dim,
-        variant['reconstruction_params']['lr_decoder'],
-        variant['reconstruction_params']['lr_encoder'],
-        variant['reconstruction_params']['alpha_kl_z'],
-        variant['reconstruction_params']['beta_kl_y'],
-        variant['reconstruction_params']['use_state_diff'],
-        variant['env_params']['state_reconstruction_clip'],
-        variant['reconstruction_params']['factor_qf_loss'],
-        variant['reconstruction_params']['train_val_percent'],
-        variant['reconstruction_params']['eval_interval'],
-        variant['reconstruction_params']['early_stopping_threshold'],
-        experiment_log_dir,
-
-        # from policy trainer
-        policy,
-        qf1,
-        qf2,
-        target_qf1,
-        target_qf2,
-        action_dim,
-        target_entropy_factor=variant['algo_params']['target_entropy_factor']
-        # stuff missing
-    )
-    """
-
     relabeler = Relabeler(
         encoder,
         replay_buffer,
@@ -351,7 +315,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         replay_buffer,
         rollout_coordinator,
         reconstruction_trainer,
-        None,  # combination_trainer, #is not supported right now
         policy_trainer,
         relabeler,
         agent,
@@ -377,7 +340,6 @@ def initialize_networks(variant, env, experiment_log_dir):
         variant['algo_params']['num_showcase_deterministic'],
         variant['algo_params']['num_showcase_non_deterministic'],
         variant['algo_params']['use_relabeler'],
-        variant['algo_params']['use_combination_trainer'],
         variant['algo_params']['exploration_agent'] is not None,
         variant['algo_params']['exploration_by_probability'],
         variant['algo_params']['exploration_fixed_probability'],

@@ -17,7 +17,6 @@ class CEMRLAlgorithm:
                  replay_buffer,
                  rollout_coordinator,
                  reconstruction_trainer,
-                 combination_trainer,
                  policy_trainer,
                  relabeler,
                  agent,
@@ -42,7 +41,6 @@ class CEMRLAlgorithm:
                  num_showcase_deterministic,
                  num_showcase_non_deterministic,
                  use_relabeler,
-                 use_combination_trainer,
                  use_exploration_agent,
                  exploration_by_probability,
                  exploration_fixed_probability,
@@ -54,7 +52,6 @@ class CEMRLAlgorithm:
         self.replay_buffer = replay_buffer
         self.rollout_coordinator = rollout_coordinator
         self.reconstruction_trainer = reconstruction_trainer
-        self.combination_trainer = combination_trainer
         self.policy_trainer = policy_trainer
         self.relabeler = relabeler
         self.agent = agent
@@ -76,7 +73,6 @@ class CEMRLAlgorithm:
         self.num_exploration_trajectories_per_task = num_exploration_trajectories_per_task
         self.num_eval_trajectories = num_eval_trajectories
         self.use_relabeler = use_relabeler
-        self.use_combination_trainer = use_combination_trainer
         self.use_exploration_agent = use_exploration_agent
         self.exploration_by_probability = exploration_by_probability
         self.exploration_fixed_probability = exploration_fixed_probability
@@ -173,53 +169,32 @@ class CEMRLAlgorithm:
             # replay buffer stats
             self.replay_buffer.stats_dict = self.replay_buffer.get_stats()
 
-            if self.use_combination_trainer:
-                # 2. combination trainer
-                print("Combination Trainer ...")
-                temp, sac_stats = self.combination_trainer.train(self.num_reconstruction_steps)
-                tabular_statistics.update(sac_stats)
-                gt.stamp('reconstruction_trainer')
+            # 2. encoder - decoder training with reconstruction trainer
+            print("Reconstruction Trainer ...")
+            self.reconstruction_trainer.train(self.num_reconstruction_steps)
+            gt.stamp('reconstruction_trainer')
 
-                # 3. relabel the data regarding z with relabeler
-                if self.use_relabeler:
-                    self.relabeler.relabel()
-                gt.stamp('relabeler')
+            # 3. relabel the data regarding z with relabeler
+            if self.use_relabeler:
+                self.relabeler.relabel()
+            gt.stamp('relabeler')
 
-                # 4. train policy via SAC with data from the replay buffer
-                print("Policy Trainer ...")
-                temp, sac_stats = self.policy_trainer.train(self.num_policy_steps)
-                tabular_statistics.update(sac_stats)
+            # Intermission: Collect debug information on the encoding
+            if self.encoding_debugger is not None:
+                print("Encoding debug information ...")
+                self.encoding_debugger.record_debug_info(self.num_reconstruction_steps)
+            gt.stamp('debug_encoding')
 
-                # alpha optimized through policy trainer should be used in combination trainer as well
-                self.combination_trainer.alpha = self.policy_trainer.log_alpha.exp()
+            # 4.a Train exploration agent
+            if self.use_exploration_agent:
+                print("Exploration agent trainer ...")
+                self.exploration_agent.train_agent(steps=self.num_exploration_steps)
+            gt.stamp('exploration_agent')
 
-            else:
-                # 2. encoder - decoder training with reconstruction trainer
-                print("Reconstruction Trainer ...")
-                self.reconstruction_trainer.train(self.num_reconstruction_steps)
-                gt.stamp('reconstruction_trainer')
-
-                # 3. relabel the data regarding z with relabeler
-                if self.use_relabeler:
-                    self.relabeler.relabel()
-                gt.stamp('relabeler')
-
-                # Intermission: Collect debug information on the encoding
-                if self.encoding_debugger is not None:
-                    print("Encoding debug information ...")
-                    self.encoding_debugger.record_debug_info(self.num_reconstruction_steps)
-                gt.stamp('debug_encoding')
-
-                # 4.a Train exploration agent
-                if self.use_exploration_agent:
-                    print("Exploration agent trainer ...")
-                    self.exploration_agent.train_agent(steps=self.num_exploration_steps)
-                gt.stamp('exploration_agent')
-
-                # 4.b train policy via SAC with data from the replay buffer
-                print("Policy Trainer ...")
-                temp, sac_stats = self.policy_trainer.train(self.num_policy_steps)
-                tabular_statistics.update(sac_stats)
+            # 4.b train policy via SAC with data from the replay buffer
+            print("Policy Trainer ...")
+            temp, sac_stats = self.policy_trainer.train(self.num_policy_steps)
+            tabular_statistics.update(sac_stats)
             gt.stamp('policy_trainer')
 
             # 5. Evaluation
