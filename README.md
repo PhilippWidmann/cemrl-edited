@@ -10,7 +10,7 @@ Our code is also available on https://github.com/PhilippWidmann/cemrl-edited
 
 ### Mujoco
 For our experiments we use MuJoCo200, which is free as of July 2022. To install it, do the following:
-- Get both the free license key and installation files from the [Mujoco download page](http://www.roboti.us/download.html).
+- Get both the free license key and installation files from the [Mujoco download page](https://www.roboti.us/download.html).
 - Put the key file in `~/.mujoco`.
 - Download mujoco200 and put the files in `~/.mujoco`.
 - Set `LD_LIBRARY_PATH` to point to the MuJoCo binaries (`~/.mujoco/mujoco200/bin`).
@@ -20,7 +20,7 @@ If this is the case, they can be installed by repeating the above steps for the 
 
 ### Conda environment
 For the remaining dependencies, we recommend using [miniconda](https://docs.conda.io/en/latest/miniconda.html).
-Use the `environment.yml` file to [set up](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) a conda environment.
+Use the `environment.yml` file to [set up](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file) a conda environment.
 The file lists all our installed packages on an Ubuntu 20.04 machine; no other configuration was tested. 
 For your installation, make sure the correct GPU driver is installed and you use a matching version of CUDA toolkit for your GPU.
 
